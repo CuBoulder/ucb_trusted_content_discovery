@@ -1,0 +1,112 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - ucb_trusted_content_discovery
+id: ucb_trusted_discovery
+label: 'Trusted Content Discovery'
+module: views
+description: 'User-filterable view of trusted syndicated content.'
+base_table: ucb_trusted_content_reference
+core_version_requirement: ^10
+display:
+  default:
+    display_plugin: default
+    id: default
+    display_title: Master
+    position: 0
+    display_options:
+      access:
+        type: perm
+        options:
+          perm: 'access content'
+      cache:
+        type: tag
+      query:
+        type: views_query
+      exposed_form:
+        type: basic
+      pager:
+        type: some
+        options:
+          items_per_page: 25
+      style:
+        type: default
+      row:
+        type: fields
+        options:
+          default_field_elements: true
+      header:
+        area_text_custom:
+          id: area_text_custom
+          table: views
+          field: area_text_custom
+          plugin_id: text
+          content: 'Trusted Content Results'
+      fields:
+        title:
+          id: title
+          table: ucb_trusted_content_reference
+          field: title
+          plugin_id: field
+        summary:
+          id: summary
+          table: ucb_trusted_content_reference
+          field: summary
+          plugin_id: field
+        trust_scope:
+          id: trust_scope
+          table: ucb_trusted_content_reference
+          field: trust_scope
+          plugin_id: field
+    filters:
+  trust_topics_target_id:
+    id: trust_topics_target_id
+    table: ucb_trusted_content_reference__trust_topics
+    field: trust_topics_target_id
+    plugin_id: taxonomy_index_tid
+    expose:
+      operator_id: ''
+      label: 'Filter by Topic'
+      use_operator: false
+      operator: '='
+      identifier: trust_topics
+      required: false
+    entity_type: ucb_trusted_content_reference
+  page_1:
+    display_plugin: page
+    id: page_1
+    display_title: Discovery
+    position: 1
+    display_options:
+      path: content/discovery
+      access:
+        type: perm
+        options:
+          perm: 'access content'
+      style:
+        type: default
+      row:
+        type: fields
+        options:
+          default_field_elements: true
+      pager:
+        type: some
+        options:
+          items_per_page: 25
+      fields:
+        title:
+          id: title
+          table: ucb_trusted_content_reference
+          field: title
+          plugin_id: field
+        summary:
+          id: summary
+          table: ucb_trusted_content_reference
+          field: summary
+          plugin_id: field
+        trust_scope:
+          id: trust_scope
+          table: ucb_trusted_content_reference
+          field: trust_scope
+          plugin_id: field

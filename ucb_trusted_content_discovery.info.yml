@@ -1,0 +1,7 @@
+name: UCB Trusted Content Discovery
+type: module
+description: Provides discovery and indexing of trusted syndicated content.
+core_version_requirement: ^10
+package: Custom
+dependencies:
+  - views

@@ -1,0 +1,13 @@
+services:
+  logger.channel.ucb_trusted_content_discovery:
+    parent: logger.channel_base
+    arguments: ['ucb_trusted_content_discovery']
+
+  ucb_trusted_content_discovery.sync:
+    class: Drupal\ucb_trusted_content_discovery\Service\TrustedContentSync
+    arguments:
+      - '@http_client'
+      - '@entity_type.manager'
+      - '@logger.channel.ucb_trusted_content_discovery'
+    tags:
+      - { name: cron }
