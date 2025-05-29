@@ -67,6 +67,8 @@ class TrustedContentSyncService {
     $entity = reset($entities) ?: $storage->create();
 
     $entity->set('title', $attributes['title'] ?? 'Untitled');
+    $entity->set('remote_uuid', $item['uuid']);
+    $entity->set('remote_type', $item['type']);
     $entity->set('summary', $attributes['summary'] ?? '');
     $entity->set('trust_scope', $attributes['trust_scope'] ?? '');
     $entity->set('trust_role', $attributes['trust_role'] ?? '');

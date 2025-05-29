@@ -59,6 +59,17 @@ display:
           table: ucb_trusted_content_reference
           field: trust_scope
           plugin_id: field
+        remote_uuid:
+          id: remote_uuid
+          table: ucb_trusted_content_reference
+          field: remote_uuid
+          plugin_id: field
+
+        remote_type:
+          id: remote_type
+          table: ucb_trusted_content_reference
+          field: remote_type
+          plugin_id: field
     filters:
   trust_topics_target_id:
     id: trust_topics_target_id

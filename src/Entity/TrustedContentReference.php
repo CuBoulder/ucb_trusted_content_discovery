@@ -37,6 +37,16 @@ public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
     ->setSetting('unsigned', TRUE)
     ->setSetting('auto_increment', TRUE);
 
+  $fields['remote_uuid'] = BaseFieldDefinition::create('uuid')
+  ->setLabel(t('Remote UUID'))
+  ->setRequired(TRUE)
+  ->setReadOnly(TRUE);
+
+$fields['remote_type'] = BaseFieldDefinition::create('string')
+  ->setLabel(t('Remote Content Type'))
+  ->setRequired(TRUE);
+
+
   $fields['title'] = BaseFieldDefinition::create('string')
     ->setLabel(t('Title'))
     ->setRequired(TRUE);

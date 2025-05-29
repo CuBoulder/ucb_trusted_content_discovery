@@ -52,24 +52,30 @@ class TrustedContentSync {
     }
   }
 
-  protected function importItem(array $item): void {
-    $id = $item['id'];
-    $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
-
-    $entities = $storage->loadByProperties(['id' => $id]);
-    $entity = reset($entities) ?: $storage->create(['id' => $id]);
-
-    $attrs = $item['attributes'];
-    $entity->set('title', $attrs['title'] ?? '');
-    $entity->set('summary', $attrs['summary'] ?? '');
-    $entity->set('trust_role', $attrs['trust_role'] ?? '');
-    $entity->set('trust_scope', $attrs['trust_scope'] ?? '');
-    $entity->set('source_site', parse_url($attrs['url'], PHP_URL_HOST));
-    $entity->set('source_url', $attrs['url']);
-    $entity->set('jsonapi_payload', json_encode($item));
-    $entity->set('last_fetched', \Drupal::time()->getRequestTime());
-
-    $entity->save();
+protected function importItem(array $item): void {
+  if (empty($item['uuid']) || empty($item['attributes'])) {
+    return;
   }
+
+  $uuid = $item['uuid'];
+  $attrs = $item['attributes'];
+
+  $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
+  $entities = $storage->loadByProperties(['remote_uuid' => $uuid]);
+  $entity = reset($entities) ?: $storage->create(['remote_uuid' => $uuid]);
+
+  $entity->set('title', $attrs['title'] ?? '');
+  $entity->set('summary', $attrs['summary'] ?? '');
+  $entity->set('trust_role', $attrs['trust_role'] ?? '');
+  $entity->set('trust_scope', $attrs['trust_scope'] ?? '');
+  $entity->set('remote_type', $item['type'] ?? '');
+  $entity->set('source_site', parse_url($attrs['url'], PHP_URL_HOST));
+  $entity->set('source_url', $attrs['url']);
+  $entity->set('jsonapi_payload', json_encode($item));
+  $entity->set('last_fetched', \Drupal::time()->getRequestTime());
+
+  $entity->save();
+}
+
 
 }
