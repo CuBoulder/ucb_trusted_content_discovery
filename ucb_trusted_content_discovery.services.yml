@@ -3,10 +3,11 @@ services:
     parent: logger.channel_base
     arguments: ['ucb_trusted_content_discovery']
 
-  ucb_trusted_content_discovery.sync:
-    class: Drupal\ucb_trusted_content_discovery\Service\TrustedContentSync
+  ucb_trusted_content_discovery.sync_service:
+    class: Drupal\ucb_trusted_content_discovery\TrustedContentSyncService
     arguments:
       - '@http_client'
+      - '@config.factory'
       - '@entity_type.manager'
       - '@logger.channel.ucb_trusted_content_discovery'
     tags:

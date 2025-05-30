@@ -2,6 +2,27 @@
 
 use Drupal\ucb_trusted_content_discovery\Entity\TrustedContentReference;
 use Symfony\Component\Yaml\Yaml;
+use Drupal\ucb_trusted_content_discovery\Service\TrustedContentSync;
+
+/**
+ * Implements hook_cron().
+ */
+function ucb_trusted_content_discovery_cron() {
+  \Drupal::logger('ucb_trusted_content_discovery')->info('Running trusted content sync via cron');
+
+  // Sanity check on service.
+  try {
+    $svc = \Drupal::service('ucb_trusted_content_discovery.sync_service');
+    \Drupal::logger('ucb_trusted_content_discovery')->info('✅ Successfully got sync service');
+
+    $svc->run();
+    \Drupal::logger('ucb_trusted_content_discovery')->info('✅ Completed calling run()');
+  }
+  catch (\Exception $e) {
+    \Drupal::logger('ucb_trusted_content_discovery')->error('💥 Error in cron: @msg', ['@msg' => $e->getMessage()]);
+  }
+}
+
 
 /**
  * Implements hook_install().

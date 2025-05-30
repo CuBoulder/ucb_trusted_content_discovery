@@ -21,3 +21,15 @@ $entity->save();
 \Drupal::logger("custom")->notice("Entity created with ID: " . $entity->id());
 '
 ```
+
+```text
+jsonapi/trust_metadata/trust_metadata
+?include=trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image
+&fields[trust_metadata--trust_metadata]=trust_role,trust_scope,trust_contact,trust_topics,node_id
+&fields[taxonomy_term--trust_topics]=name
+&fields[node--basic_page]=title,body
+&fields[node--ucb_person]=title,body
+&fields[node--ucb_article]=title,field_ucb_article_summary,field_ucb_article_thumbnail
+&fields[media--image]=field_media_image
+&fields[file--file]=uri,url
+```

@@ -64,26 +64,11 @@ display:
           table: ucb_trusted_content_reference
           field: remote_uuid
           plugin_id: field
-
         remote_type:
           id: remote_type
           table: ucb_trusted_content_reference
           field: remote_type
           plugin_id: field
-    filters:
-  trust_topics_target_id:
-    id: trust_topics_target_id
-    table: ucb_trusted_content_reference__trust_topics
-    field: trust_topics_target_id
-    plugin_id: taxonomy_index_tid
-    expose:
-      operator_id: ''
-      label: 'Filter by Topic'
-      use_operator: false
-      operator: '='
-      identifier: trust_topics
-      required: false
-    entity_type: ucb_trusted_content_reference
   page_1:
     display_plugin: page
     id: page_1
@@ -120,4 +105,14 @@ display:
           id: trust_scope
           table: ucb_trusted_content_reference
           field: trust_scope
+          plugin_id: field
+        remote_uuid:
+          id: remote_uuid
+          table: ucb_trusted_content_reference
+          field: remote_uuid
+          plugin_id: field
+        remote_type:
+          id: remote_type
+          table: ucb_trusted_content_reference
+          field: remote_type
           plugin_id: field
