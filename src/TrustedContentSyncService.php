@@ -96,7 +96,7 @@ class TrustedContentSyncService {
         //TO DO:  DEBUGGING
         $this->logger->notice('Fetched @count items', ['@count' => count($json['data'])]);
         foreach ($json['data'] as $item) {
-          $this->logger->notice('📥 Processing item ID: @id', ['@id' => $item['id'] ?? 'unknown']);
+          $this->logger->notice('Processing item ID: @id', ['@id' => $item['id'] ?? 'unknown']);
           $this->saveEntity($item, $json['included'] ?? [], $site_name);
         }
       }
@@ -156,7 +156,7 @@ protected function saveEntity(array $item, array $included, string $site): void 
     $topic = $this->findIncludedById($included, $topicRef['type'], $topicRef['id']);
     if (!empty($topic['attributes']['name'])) {
       $remoteName = $topic['attributes']['name'];
-      $this->logger->info('🔎 Looking up local term for remote topic: @remote', ['@remote' => $remoteName]);
+      $this->logger->info('Looking up local term for remote topic: @remote', ['@remote' => $remoteName]);
 
       $matches = \Drupal::entityTypeManager()
         ->getStorage('taxonomy_term')
@@ -166,14 +166,14 @@ protected function saveEntity(array $item, array $included, string $site): void 
         ]);
 
       if ($localTerm = reset($matches)) {
-        $this->logger->notice('✅ Matched topic "@remote" to local term ID: @id', [
+        $this->logger->notice('Matched topic "@remote" to local term ID: @id', [
           '@remote' => $remoteName,
           '@id' => $localTerm->id(),
         ]);
         $topicTerms[] = $localTerm->id();
       }
       else {
-        $this->logger->warning('⚠️ No local match found for remote topic: @remote', ['@remote' => $remoteName]);
+        $this->logger->warning('No local match found for remote topic: @remote', ['@remote' => $remoteName]);
       }
     }
   }
