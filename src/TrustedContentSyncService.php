@@ -106,82 +106,104 @@ class TrustedContentSyncService {
     }
   }
 
-  protected function saveEntity(array $item, array $included, string $site): void {
-    if (empty($item['id']) || empty($item['attributes'])) {
-      $this->logger->warning('Skipping item with missing ID or attributes.');
-      return;
-    }
-
-    $uuid = $item['id'];
-    $attributes = $item['attributes'];
-    $relationships = $item['relationships'] ?? [];
-
-    $nodeRef = $relationships['node_id']['data'] ?? null;
-    $nodeId = $nodeRef['id'] ?? null;
-    $nodeType = $nodeRef['type'] ?? null;
-    // TO DO : Remove debugging
-    $this->logger->info('Processing item @uuid with node @type:@id', [
-      '@uuid' => $uuid,
-      '@type' => $nodeType,
-      '@id' => $nodeId,
-    ]);
-
-    $relatedNode = $this->findIncludedById($included, $nodeType, $nodeId);
-    if (!$relatedNode) {
-      $this->logger->warning('Related node not found for @type:@id', ['@type' => $nodeType, '@id' => $nodeId]);
-    }
-
-    $nodeAttrs = $relatedNode['attributes'] ?? [];
-    $title = $nodeAttrs['title'] ?? 'Untitled';
-    $summary = '';
-
-    switch ($nodeType) {
-      case 'node--ucb_article':
-        $summary = $nodeAttrs['field_ucb_article_summary'] ?? '';
-        break;
-      case 'node--ucb_person':
-      case 'node--basic_page':
-        $summary = $nodeAttrs['body']['summary'] ?? '';
-        break;
-    }
-// TO DO: Fix linking topics to pre-set taxonomy
-    $topicNames = [];
-    foreach ($relationships['trust_topics']['data'] ?? [] as $topicRef) {
-      $topic = $this->findIncludedById($included, $topicRef['type'], $topicRef['id']);
-      if (!empty($topic['attributes']['name'])) {
-        $topicNames[] = $topic['attributes']['name'];
-      }
-    }
-// Save as a content reference entity, TO DO: Update existing by UUID
-    $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
-    $entities = $storage->loadByProperties(['remote_uuid' => $uuid]);
-    $entity = reset($entities) ?: $storage->create(['remote_uuid' => $uuid]);
-
-    $entity->set('title', $title);
-    $entity->set('summary', $summary);
-    $entity->set('trust_role', $attributes['trust_role'] ?? '');
-    $entity->set('trust_scope', $attributes['trust_scope'] ?? '');
-    $entity->set('remote_type', $nodeType);
-    $entity->set('source_site', $site);
-    $entity->set('source_url', $relatedNode['links']['self']['href'] ?? '');
-    $entity->set('jsonapi_payload', json_encode($item));
-    $entity->set('last_fetched', \Drupal::time()->getRequestTime());
-    $entity->set('topic_names', json_encode($topicNames));
-
-    $entity->save();
-// TO DO: Remove logging
-    $this->logger->notice('Saved entity @uuid with title: @title', [
-      '@uuid' => $uuid,
-      '@title' => $title,
-    ]);
+protected function saveEntity(array $item, array $included, string $site): void {
+  if (empty($item['id']) || empty($item['attributes'])) {
+    $this->logger->warning('Skipping item with missing ID or attributes.');
+    return;
   }
 
-  protected function findIncludedById(array $included, string $type, string $id): ?array {
-    foreach ($included as $entry) {
-      if ($entry['type'] === $type && $entry['id'] === $id) {
-        return $entry;
+  $uuid = $item['id'];
+  $attributes = $item['attributes'];
+  $relationships = $item['relationships'] ?? [];
+
+  $nodeRef = $relationships['node_id']['data'] ?? null;
+  $nodeId = $nodeRef['id'] ?? null;
+  $nodeType = $nodeRef['type'] ?? null;
+
+  $this->logger->info('Processing item @uuid with node @type:@id', [
+    '@uuid' => $uuid,
+    '@type' => $nodeType,
+    '@id' => $nodeId,
+  ]);
+
+  $relatedNode = $this->findIncludedById($included, $nodeType, $nodeId);
+  if (!$relatedNode) {
+    $this->logger->warning('Related node not found for @type:@id', ['@type' => $nodeType, '@id' => $nodeId]);
+  }
+
+  $nodeAttrs = $relatedNode['attributes'] ?? [];
+  $title = $nodeAttrs['title'] ?? 'Untitled';
+  $summary = '';
+
+  switch ($nodeType) {
+    case 'node--ucb_article':
+      $summary = $nodeAttrs['field_ucb_article_summary'] ?? '';
+      break;
+    case 'node--ucb_person':
+    case 'node--basic_page':
+      $summary = $nodeAttrs['body']['summary'] ?? '';
+      break;
+  }
+
+  // Load or create the entity before setting fields.
+  $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
+  $entities = $storage->loadByProperties(['remote_uuid' => $uuid]);
+  $entity = reset($entities) ?: $storage->create(['remote_uuid' => $uuid]);
+
+  // Map topic names to local taxonomy term IDs.
+  $topicTerms = [];
+  foreach ($relationships['trust_topics']['data'] ?? [] as $topicRef) {
+    $topic = $this->findIncludedById($included, $topicRef['type'], $topicRef['id']);
+    if (!empty($topic['attributes']['name'])) {
+      $remoteName = $topic['attributes']['name'];
+      $this->logger->info('🔎 Looking up local term for remote topic: @remote', ['@remote' => $remoteName]);
+
+      $matches = \Drupal::entityTypeManager()
+        ->getStorage('taxonomy_term')
+        ->loadByProperties([
+          'name' => $remoteName,
+          'vid' => 'trust_topics',
+        ]);
+
+      if ($localTerm = reset($matches)) {
+        $this->logger->notice('✅ Matched topic "@remote" to local term ID: @id', [
+          '@remote' => $remoteName,
+          '@id' => $localTerm->id(),
+        ]);
+        $topicTerms[] = $localTerm->id();
+      }
+      else {
+        $this->logger->warning('⚠️ No local match found for remote topic: @remote', ['@remote' => $remoteName]);
       }
     }
-    return null;
+  }
+
+  // Set fields on the entity.
+  $entity->set('title', $title);
+  $entity->set('summary', $summary);
+  $entity->set('trust_role', $attributes['trust_role'] ?? '');
+  $entity->set('trust_scope', $attributes['trust_scope'] ?? '');
+  $entity->set('remote_type', $nodeType);
+  $entity->set('source_site', $site);
+  $entity->set('source_url', $relatedNode['links']['self']['href'] ?? '');
+  $entity->set('jsonapi_payload', json_encode($item));
+  $entity->set('last_fetched', \Drupal::time()->getRequestTime());
+  $entity->set('trust_topics', $topicTerms);
+
+  $entity->save();
+
+  $this->logger->notice('💾 Saved entity @uuid with title: @title', [
+    '@uuid' => $uuid,
+    '@title' => $title,
+  ]);
+}
+
+    protected function findIncludedById(array $included, string $type, string $id): ?array {
+      foreach ($included as $entry) {
+        if ($entry['type'] === $type && $entry['id'] === $id) {
+          return $entry;
+        }
+      }
+      return null;
   }
 }
