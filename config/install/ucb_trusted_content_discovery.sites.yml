@@ -1,2 +1,7 @@
 sites:
-  - http://trusted-site.ddev.site
+  trusted-site:
+    public: 'https://trusted-site.ddev.site'
+    internal: 'http://trusted-site-web'
+  foo-site:
+    public: 'https://foo.university.edu'
+    internal: 'http://foo-site-web'

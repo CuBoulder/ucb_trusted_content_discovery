@@ -26,59 +26,85 @@ class TrustedContentSyncService {
     $this->logger = $logger;
   }
 
-public function run() {
-  $this->logger->notice('run() method called on TrustedContentSyncService');
+  public function run() {
+    // TO DO: Remove logging
+    $this->logger->notice('run() method called on TrustedContentSyncService');
 
-  $config = $this->configFactory->get('ucb_trusted_content_discovery.sites');
-  $sites = $config->get('sites') ?? [];
+    $config = $this->configFactory->get('ucb_trusted_content_discovery.sites');
+    $sites = $config->get('sites') ?? [];
 
-  if (empty($sites)) {
-    $this->logger->warning('No sites configured in ucb_trusted_content_discovery.sites');
-    return;
-  }
+    if (empty($sites)) {
+      $this->logger->warning('No sites configured in ucb_trusted_content_discovery.sites');
+      return;
+    }
 
-  foreach ($sites as $site) {
-    $this->logger->notice('Syncing from site: @site', ['@site' => $site]);
+    // TO DO : Need this for ddev, should work for prod but will need to test
+    $isDdev = getenv('IS_DDEV_PROJECT') === 'true';
 
-    $query = http_build_query([
-      'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image',
-      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id',
-      'fields[taxonomy_term--trust_topics]' => 'name',
-      'fields[node--basic_page]' => 'title,body',
-      'fields[node--ucb_person]' => 'title,body',
-      'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail',
-      'fields[media--image]' => 'field_media_image',
-      'fields[file--file]' => 'uri,url',
-    ]);
-    $url = rtrim($site, '/') . '/jsonapi/trust_metadata/trust_metadata?' . $query;
+    foreach ($sites as $site_name => $site_info) {
+      $this->logger->notice('Syncing from site: @site', ['@site' => $site_name]);
 
-    $this->logger->notice('Requesting URL: @url', ['@url' => $url]);
+      $base_url = $site_info['public'] ?? '';
+      if ($isDdev && !empty($site_info['internal'])) {
+        $base_url = $site_info['internal'];
+        $this->logger->notice('Using internal URL for DDEV: @internal', ['@internal' => $base_url]);
+      }
 
-    try {
-$response = $this->httpClient->get($url, [
-  'headers' => ['Accept' => 'application/vnd.api+json'],
-  'verify' => FALSE, // ← disable SSL verification for self-signed certs
-]);
-      $json = json_decode($response->getBody(), true);
-
-      if (!is_array($json)) {
-        $this->logger->error('JSON decode failed from @url', ['@url' => $url]);
+      if (empty($base_url)) {
+        $this->logger->error('No valid URL defined for site: @site', ['@site' => $site_name]);
         continue;
       }
+      // Endpoint
+      $query = http_build_query([
+        'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image',
+        'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id',
+        'fields[taxonomy_term--trust_topics]' => 'name',
+        'fields[node--basic_page]' => 'title,body',
+        'fields[node--ucb_person]' => 'title,body',
+        'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail',
+        'fields[media--image]' => 'field_media_image',
+        'fields[file--file]' => 'uri,url',
+      ]);
 
-      $this->logger->notice('Fetched @count items', ['@count' => count($json['data'] ?? [])]);
+      $url = rtrim($base_url, '/') . '/jsonapi/trust_metadata/trust_metadata?' . $query;
 
-      foreach ($json['data'] as $item) {
-        $this->logger->notice('Processing item ID: @id', ['@id' => $item['id'] ?? 'unknown']);
-        $this->saveEntity($item, $json['included'] ?? [], $site);
+      $this->logger->notice('Requesting URL: @url', ['@url' => $url]);
+
+      try {
+        $response = $this->httpClient->get($url, [
+          'headers' => ['Accept' => 'application/json'],
+          'verify' => !$isDdev,
+        ]);
+        //TO DO:  DEBUGGING START (remove later)
+        $raw = (string) $response->getBody();
+        file_put_contents('/tmp/trusted-content.json', $raw);
+
+        $this->logger->notice('Full JSON response: @full', [
+          '@full' => $raw,
+        ]);
+
+        $this->logger->notice('Response status code: @code', ['@code' => $response->getStatusCode()]);
+
+        $json = json_decode($raw, true);
+        $this->logger->debug('Decoded JSON: @json', ['@json' => print_r($json, true)]);
+
+        //TO DO:  DEBUGGING END (remove later)
+        if (!is_array($json) || !isset($json['data'])) {
+          $this->logger->error('Invalid or missing "data" key in JSON response from @url', ['@url' => $url]);
+          continue;
+        }
+        //TO DO:  DEBUGGING
+        $this->logger->notice('Fetched @count items', ['@count' => count($json['data'])]);
+        foreach ($json['data'] as $item) {
+          $this->logger->notice('📥 Processing item ID: @id', ['@id' => $item['id'] ?? 'unknown']);
+          $this->saveEntity($item, $json['included'] ?? [], $site_name);
+        }
+      }
+      catch (\Exception $e) {
+        $this->logger->error('💥 Error: @msg', ['@msg' => $e->getMessage()]);
       }
     }
-    catch (\Exception $e) {
-      $this->logger->error('Error: @msg', ['@msg' => $e->getMessage()]);
-    }
   }
-}
-
 
   protected function saveEntity(array $item, array $included, string $site): void {
     if (empty($item['id']) || empty($item['attributes'])) {
@@ -93,7 +119,7 @@ $response = $this->httpClient->get($url, [
     $nodeRef = $relationships['node_id']['data'] ?? null;
     $nodeId = $nodeRef['id'] ?? null;
     $nodeType = $nodeRef['type'] ?? null;
-
+    // TO DO : Remove debugging
     $this->logger->info('Processing item @uuid with node @type:@id', [
       '@uuid' => $uuid,
       '@type' => $nodeType,
@@ -118,7 +144,7 @@ $response = $this->httpClient->get($url, [
         $summary = $nodeAttrs['body']['summary'] ?? '';
         break;
     }
-
+// TO DO: Fix linking topics to pre-set taxonomy
     $topicNames = [];
     foreach ($relationships['trust_topics']['data'] ?? [] as $topicRef) {
       $topic = $this->findIncludedById($included, $topicRef['type'], $topicRef['id']);
@@ -126,7 +152,7 @@ $response = $this->httpClient->get($url, [
         $topicNames[] = $topic['attributes']['name'];
       }
     }
-
+// Save as a content reference entity, TO DO: Update existing by UUID
     $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
     $entities = $storage->loadByProperties(['remote_uuid' => $uuid]);
     $entity = reset($entities) ?: $storage->create(['remote_uuid' => $uuid]);
@@ -143,7 +169,7 @@ $response = $this->httpClient->get($url, [
     $entity->set('topic_names', json_encode($topicNames));
 
     $entity->save();
-
+// TO DO: Remove logging
     $this->logger->notice('Saved entity @uuid with title: @title', [
       '@uuid' => $uuid,
       '@title' => $title,
