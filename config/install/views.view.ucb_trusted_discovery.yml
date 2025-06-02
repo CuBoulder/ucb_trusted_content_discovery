@@ -1,41 +1,306 @@
+uuid: 5508d2f6-8902-43f7-9ecd-a40c129fd0e4
 langcode: en
 status: true
 dependencies:
   module:
     - ucb_trusted_content_discovery
+    - user
 id: ucb_trusted_discovery
 label: 'Trusted Content Discovery'
 module: views
 description: 'User-filterable view of trusted syndicated content.'
+tag: ''
 base_table: ucb_trusted_content_reference
-core_version_requirement: ^10
+base_field: id
 display:
   default:
-    display_plugin: default
     id: default
     display_title: Master
+    display_plugin: default
     position: 0
     display_options:
+      fields:
+        title:
+          id: title
+          table: ucb_trusted_content_reference
+          field: title
+          plugin_id: field
+        summary:
+          id: summary
+          table: ucb_trusted_content_reference
+          field: summary
+          plugin_id: field
+        trust_scope:
+          id: trust_scope
+          table: ucb_trusted_content_reference
+          field: trust_scope
+          plugin_id: field
+        remote_uuid:
+          id: remote_uuid
+          table: ucb_trusted_content_reference
+          field: remote_uuid
+          plugin_id: field
+        remote_type:
+          id: remote_type
+          table: ucb_trusted_content_reference
+          field: remote_type
+          plugin_id: field
+      pager:
+        type: some
+        options:
+          items_per_page: 25
+      exposed_form:
+        type: basic
+        options:
+          submit_button: Apply
+          reset_button: true
       access:
         type: perm
         options:
           perm: 'access content'
       cache:
         type: tag
-      query:
-        type: views_query
-      exposed_form:
-        type: basic
-      pager:
-        type: some
-        options:
-          items_per_page: 25
+      filters:
+        remote_type:
+          id: remote_type
+          table: ucb_trusted_content_reference
+          field: remote_type
+          relationship: none
+          group_type: group
+          admin_label: ''
+          entity_type: ucb_trusted_content_reference
+          entity_field: remote_type
+          plugin_id: string
+          operator: '='
+          value: ''
+          group: 1
+          exposed: true
+          expose:
+            operator_id: remote_type_op
+            label: 'Remote Content Type'
+            description: null
+            use_operator: false
+            operator: remote_type_op
+            operator_limit_selection: false
+            operator_list: {  }
+            identifier: remote_type
+            required: false
+            remember: false
+            multiple: false
+            remember_roles:
+              authenticated: authenticated
+            placeholder: null
+          is_grouped: true
+          group_info:
+            label: 'Remote Content Type'
+            description: ''
+            identifier: remote_type
+            optional: true
+            widget: select
+            multiple: false
+            remember: false
+            default_group: All
+            default_group_multiple: {  }
+            group_items:
+              1:
+                title: ''
+                operator: '='
+                value: ''
+              2:
+                title: ''
+                operator: '='
+                value: ''
+              3:
+                title: ''
+                operator: '='
+                value: ''
+        trust_role:
+          id: trust_role
+          table: ucb_trusted_content_reference
+          field: trust_role
+          relationship: none
+          group_type: group
+          admin_label: ''
+          entity_type: ucb_trusted_content_reference
+          entity_field: trust_role
+          plugin_id: string
+          operator: '='
+          value: ''
+          group: 1
+          exposed: true
+          expose:
+            operator_id: trust_role_op
+            label: 'Trust Role'
+            description: null
+            use_operator: false
+            operator: trust_role_op
+            operator_limit_selection: false
+            operator_list: {  }
+            identifier: trust_role
+            required: false
+            remember: false
+            multiple: false
+            remember_roles:
+              authenticated: authenticated
+            placeholder: null
+          is_grouped: true
+          group_info:
+            label: 'Trust Role'
+            description: ''
+            identifier: trust_role
+            optional: true
+            widget: select
+            multiple: false
+            remember: false
+            default_group: All
+            default_group_multiple: {  }
+            group_items:
+              1:
+                title: ''
+                operator: '='
+                value: ''
+              2:
+                title: ''
+                operator: '='
+                value: ''
+              3:
+                title: ''
+                operator: '='
+                value: ''
+        trust_scope:
+          id: trust_scope
+          table: ucb_trusted_content_reference
+          field: trust_scope
+          relationship: none
+          group_type: group
+          admin_label: ''
+          entity_type: ucb_trusted_content_reference
+          entity_field: trust_scope
+          plugin_id: string
+          operator: '='
+          value: ''
+          group: 1
+          exposed: true
+          expose:
+            operator_id: trust_scope_op
+            label: 'Trust Scope'
+            description: null
+            use_operator: false
+            operator: trust_scope_op
+            operator_limit_selection: false
+            operator_list: {  }
+            identifier: trust_scope
+            required: false
+            remember: false
+            multiple: false
+            remember_roles:
+              authenticated: authenticated
+            placeholder: null
+          is_grouped: true
+          group_info:
+            label: 'Trust Scope'
+            description: ''
+            identifier: trust_scope
+            optional: true
+            widget: select
+            multiple: false
+            remember: false
+            default_group: All
+            default_group_multiple: {  }
+            group_items:
+              1:
+                title: ''
+                operator: '='
+                value: ''
+              2:
+                title: ''
+                operator: '='
+                value: ''
+              3:
+                title: ''
+                operator: '='
+                value: ''
+        trust_topics_target_id:
+          id: trust_topics_target_id
+          table: ucb_trusted_content_reference__trust_topics
+          field: trust_topics_target_id
+          relationship: none
+          group_type: group
+          admin_label: ''
+          entity_type: ucb_trusted_content_reference
+          entity_field: trust_topics
+          plugin_id: numeric
+          operator: '='
+          value:
+            min: ''
+            max: ''
+            value: ''
+          group: 1
+          exposed: true
+          expose:
+            operator_id: trust_topics_target_id_op
+            label: 'Trust Topics'
+            description: null
+            use_operator: false
+            operator: trust_topics_target_id_op
+            operator_limit_selection: false
+            operator_list: {  }
+            identifier: trust_topics_target_id
+            required: false
+            remember: false
+            multiple: false
+            remember_roles:
+              authenticated: authenticated
+            min_placeholder: null
+            max_placeholder: null
+            placeholder: null
+          is_grouped: true
+          group_info:
+            label: 'Trust Topics'
+            description: ''
+            identifier: trust_topics_target_id
+            optional: true
+            widget: select
+            multiple: false
+            remember: false
+            default_group: All
+            default_group_multiple: {  }
+            group_items:
+              1:
+                title: ''
+                operator: '='
+                value:
+                  min: ''
+                  max: ''
+                  value: ''
+              2:
+                title: ''
+                operator: '='
+                value:
+                  min: ''
+                  max: ''
+                  value: ''
+              3:
+                title: ''
+                operator: '='
+                value:
+                  min: ''
+                  max: ''
+                  value: ''
+      filter_groups:
+        operator: AND
+        groups:
+          1: AND
       style:
         type: default
       row:
         type: fields
         options:
           default_field_elements: true
+      query:
+        type: views_query
+        options:
+          distinct: true
       header:
         area_text_custom:
           id: area_text_custom
@@ -43,6 +308,21 @@ display:
           field: area_text_custom
           plugin_id: text
           content: 'Trusted Content Results'
+      display_extenders: {  }
+    cache_metadata:
+      max-age: -1
+      contexts:
+        - 'languages:language_content'
+        - 'languages:language_interface'
+        - url
+        - user.permissions
+      tags: {  }
+  page_1:
+    id: page_1
+    display_title: Discovery
+    display_plugin: page
+    position: 1
+    display_options:
       fields:
         title:
           id: title
@@ -69,50 +349,59 @@ display:
           table: ucb_trusted_content_reference
           field: remote_type
           plugin_id: field
-  page_1:
-    display_plugin: page
-    id: page_1
-    display_title: Discovery
-    position: 1
-    display_options:
-      path: content/discovery
+      pager:
+        type: some
+        options:
+          items_per_page: 25
+      exposed_form:
+        type: basic
+        options:
+          submit_button: Apply
+          reset_button: true
       access:
         type: perm
         options:
           perm: 'access content'
+      filters:
+        trust_topics:
+          id: trust_topics
+          table: ucb_trusted_content_reference
+          field: trust_topics
+          plugin_id: entity_reference
+          group: 1
+          expose:
+            operator_id: ''
+            label: 'Filter by Topic'
+            description: ''
+            use_operator: false
+            operator: ''
+            identifier: trust_topics
+            required: false
+            remember: false
+            multiple: true
+            remember_roles:
+              - anonymous
+              - authenticated
+            reduce: false
+          is_grouped: false
+          type: select
       style:
         type: default
       row:
         type: fields
         options:
           default_field_elements: true
-      pager:
-        type: some
+      query:
+        type: views_query
         options:
-          items_per_page: 25
-      fields:
-        title:
-          id: title
-          table: ucb_trusted_content_reference
-          field: title
-          plugin_id: field
-        summary:
-          id: summary
-          table: ucb_trusted_content_reference
-          field: summary
-          plugin_id: field
-        trust_scope:
-          id: trust_scope
-          table: ucb_trusted_content_reference
-          field: trust_scope
-          plugin_id: field
-        remote_uuid:
-          id: remote_uuid
-          table: ucb_trusted_content_reference
-          field: remote_uuid
-          plugin_id: field
-        remote_type:
-          id: remote_type
-          table: ucb_trusted_content_reference
-          field: remote_type
-          plugin_id: field
+          distinct: true
+      display_extenders: {  }
+      path: content/discovery
+    cache_metadata:
+      max-age: -1
+      contexts:
+        - 'languages:language_content'
+        - 'languages:language_interface'
+        - url
+        - user.permissions
+      tags: {  }

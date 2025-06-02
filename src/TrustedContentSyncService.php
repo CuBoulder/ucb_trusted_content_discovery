@@ -101,7 +101,7 @@ class TrustedContentSyncService {
         }
       }
       catch (\Exception $e) {
-        $this->logger->error('💥 Error: @msg', ['@msg' => $e->getMessage()]);
+        $this->logger->error('Error: @msg', ['@msg' => $e->getMessage()]);
       }
     }
   }
@@ -181,8 +181,29 @@ protected function saveEntity(array $item, array $included, string $site): void 
   // Set fields on the entity.
   $entity->set('title', $title);
   $entity->set('summary', $summary);
-  $entity->set('trust_role', $attributes['trust_role'] ?? '');
-  $entity->set('trust_scope', $attributes['trust_scope'] ?? '');
+
+// Validate and set trust_role.
+$role = $attributes['trust_role'] ?? '';
+$allowed_roles = ['primary_source', 'secondary_source', 'subject_matter_contributor', 'unverified'];
+if (in_array($role, $allowed_roles, TRUE)) {
+  $entity->set('trust_role', $role);
+}
+else {
+  $this->logger->warning('Invalid trust_role received: @role', ['@role' => $role]);
+  $entity->set('trust_role', ''); // or skip setting it entirely
+}
+
+// Validate and set trust_scope.
+$scope = $attributes['trust_scope'] ?? '';
+$allowed_scopes = ['department_level', 'college_level', 'administrative_unit', 'campus_wide'];
+if (in_array($scope, $allowed_scopes, TRUE)) {
+  $entity->set('trust_scope', $scope);
+}
+else {
+  $this->logger->warning('Invalid trust_scope received: @scope', ['@scope' => $scope]);
+  $entity->set('trust_scope', '');
+}
+
   $entity->set('remote_type', $nodeType);
   $entity->set('source_site', $site);
   $entity->set('source_url', $relatedNode['links']['self']['href'] ?? '');

@@ -53,11 +53,54 @@ class TrustedContentReference extends ContentEntityBase {
     $fields['summary'] = BaseFieldDefinition::create('string_long')
       ->setLabel(t('Summary'));
 
-    $fields['trust_role'] = BaseFieldDefinition::create('string')
-      ->setLabel(t('Trust Role'));
+    $fields['trust_role'] = BaseFieldDefinition::create('list_string')
+      ->setLabel(t('Trust Role'))
+      ->setDescription(t('The trust role of the content.'))
+      ->setSettings([
+        'allowed_values' => [
+          'primary_source' => 'Primary Source',
+          'secondary_source' => 'Secondary Source',
+          'subject_matter_contributor' => 'Subject Matter Contributor/Expert',
+          'unverified' => 'Unverified',
+        ],
+      ])
+      ->setDefaultValue('')
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'list_default',
+        'weight' => -4,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'options_select',
+        'weight' => -4,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
 
-    $fields['trust_scope'] = BaseFieldDefinition::create('string')
-      ->setLabel(t('Trust Scope'));
+    $fields['trust_scope'] = BaseFieldDefinition::create('list_string')
+      ->setLabel(t('Trust Scope'))
+      ->setSettings([
+        'allowed_values' => [
+          'department_level' => 'Department Level',
+          'college_level' => 'College Level',
+          'administrative_unit' => 'Administrative Unit',
+          'campus_wide' => 'Campus-wide',
+        ],
+      ])
+
+      ->setDisplayOptions('form', [
+        'type' => 'options_select',
+        'weight' => 2,
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'list_default',
+        'weight' => 2,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
 
     $fields['source_site'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Source Site'));

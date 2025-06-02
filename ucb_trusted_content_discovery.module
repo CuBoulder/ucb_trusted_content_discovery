@@ -72,3 +72,45 @@ function ucb_trusted_content_discovery_install() {
     \Drupal::logger('ucb_trusted_content_discovery')->error('YAML file not found at install path!');
   }
 }
+
+/**
+ * Implements hook_views_data_alter().
+ */
+function ucb_trusted_content_discovery_views_data_alter(array &$data) {
+  // Trust Role.
+  $data['ucb_trusted_content_reference']['trust_role']['filter']['id'] = 'in_operator';
+  $data['ucb_trusted_content_reference']['trust_role']['filter']['label'] = t('Trust Role');
+  $data['ucb_trusted_content_reference']['trust_role']['filter']['help'] = t('Filter by Trust Role.');
+  $data['ucb_trusted_content_reference']['trust_role']['filter']['options callback'] = 'ucb_trusted_content_discovery_trust_role_options';
+
+  // Trust Scope.
+  $data['ucb_trusted_content_reference']['trust_scope']['filter']['id'] = 'in_operator';
+  $data['ucb_trusted_content_reference']['trust_scope']['filter']['label'] = t('Trust Scope');
+  $data['ucb_trusted_content_reference']['trust_scope']['filter']['help'] = t('Filter by Trust Scope.');
+  $data['ucb_trusted_content_reference']['trust_scope']['filter']['options callback'] = 'ucb_trusted_content_discovery_trust_scope_options';
+}
+
+
+/**
+ * Options callback for trust_role.
+ */
+function ucb_trusted_content_discovery_trust_role_options() {
+  return [
+    'primary_source' => 'Primary Source',
+    'secondary_source' => 'Secondary Source',
+    'subject_matter_contributor' => 'Subject Matter Contributor/Expert',
+    'unverified' => 'Unverified',
+  ];
+}
+
+/**
+ * Options callback for trust_scope.
+ */
+function ucb_trusted_content_discovery_trust_scope_options() {
+  return [
+    'department_level' => 'Department Level',
+    'college_level' => 'College Level',
+    'administrative_unit' => 'Administrative Unit',
+    'campus_wide' => 'Campus-wide',
+  ];
+}
