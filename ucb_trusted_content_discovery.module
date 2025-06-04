@@ -88,6 +88,21 @@ function ucb_trusted_content_discovery_views_data_alter(array &$data) {
   $data['ucb_trusted_content_reference']['trust_scope']['filter']['label'] = t('Trust Scope');
   $data['ucb_trusted_content_reference']['trust_scope']['filter']['help'] = t('Filter by Trust Scope.');
   $data['ucb_trusted_content_reference']['trust_scope']['filter']['options callback'] = 'ucb_trusted_content_discovery_trust_scope_options';
+
+
+$data['ucb_trusted_content_reference__trust_topics']['trust_topics_target_id'] = [
+    'title' => t('Trust Topics'),
+    'help' => t('The taxonomy terms referenced by this field.'),
+    'relationship' => [
+      'title' => t('Trust Topics'),
+      'label' => t('Trust Topics'),
+      'help' => t('Join to taxonomy terms referenced in trust_topics.'),
+      'base' => 'taxonomy_term_field_data',
+      'base field' => 'tid',
+      'relationship field' => 'trust_topics_target_id',
+      'id' => 'standard',
+    ],
+  ];
 }
 
 

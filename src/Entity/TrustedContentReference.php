@@ -136,6 +136,9 @@ class TrustedContentReference extends ContentEntityBase {
         'type' => 'entity_reference_label',
         'weight' => 6,
       ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE)
       ->setRequired(FALSE);
 
     $fields['focal_image_wide'] = BaseFieldDefinition::create('uri')
