@@ -22,6 +22,7 @@ use Drupal\Core\Field\BaseFieldDefinition;
  *     "id" = "id",
  *     "label" = "title",
  *     "langcode" = "langcode",
+ *     "uuid" = "uuid",
  *   },
  *   admin_permission = "administer trusted content references"
  * )
@@ -37,8 +38,8 @@ class TrustedContentReference extends ContentEntityBase {
       ->setSetting('unsigned', TRUE)
       ->setSetting('auto_increment', TRUE);
 
-    $fields['remote_uuid'] = BaseFieldDefinition::create('uuid')
-      ->setLabel(t('Remote UUID'))
+    $fields['uuid'] = BaseFieldDefinition::create('uuid')
+      ->setLabel(t('UUID'))
       ->setRequired(TRUE)
       ->setReadOnly(TRUE);
 

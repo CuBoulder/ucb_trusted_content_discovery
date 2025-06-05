@@ -38,10 +38,10 @@ display:
           table: ucb_trusted_content_reference
           field: trust_scope
           plugin_id: field
-        remote_uuid:
-          id: remote_uuid
+        uuid:
+          id: uuid
           table: ucb_trusted_content_reference
-          field: remote_uuid
+          field: uuid
           plugin_id: field
         remote_type:
           id: remote_type
@@ -289,10 +289,10 @@ display:
           table: ucb_trusted_content_reference
           field: trust_scope
           plugin_id: field
-        remote_uuid:
-          id: remote_uuid
+        uuid:
+          id: uuid
           table: ucb_trusted_content_reference
-          field: remote_uuid
+          field: uuid
           plugin_id: field
         remote_type:
           id: remote_type

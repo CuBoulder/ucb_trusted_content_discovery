@@ -3,6 +3,9 @@
 use Drupal\ucb_trusted_content_discovery\Entity\TrustedContentReference;
 use Symfony\Component\Yaml\Yaml;
 use Drupal\ucb_trusted_content_discovery\Service\TrustedContentSync;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Access\AccessResult;
 
 /**
  * Implements hook_cron().
@@ -128,4 +131,11 @@ function ucb_trusted_content_discovery_trust_scope_options() {
     'administrative_unit' => 'Administrative Unit',
     'campus_wide' => 'Campus-wide',
   ];
+}
+
+function ucb_trusted_content_discovery_entity_access(EntityInterface $entity, $operation, AccountInterface $account) {
+  if ($entity->getEntityTypeId() === 'ucb_trusted_content_reference' && $operation === 'view') {
+    return AccessResult::allowed();
+  }
+  return AccessResult::neutral();
 }

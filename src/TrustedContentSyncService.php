@@ -147,8 +147,8 @@ protected function saveEntity(array $item, array $included, string $site): void 
 
   // Load or create the entity before setting fields.
   $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
-  $entities = $storage->loadByProperties(['remote_uuid' => $uuid]);
-  $entity = reset($entities) ?: $storage->create(['remote_uuid' => $uuid]);
+  $entities = $storage->loadByProperties(['uuid' => $uuid]);
+  $entity = reset($entities) ?: $storage->create(['uuid' => $uuid]);
 
   // Map topic names to local taxonomy term IDs.
   $topicTerms = [];
