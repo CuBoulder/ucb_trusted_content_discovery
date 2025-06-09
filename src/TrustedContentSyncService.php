@@ -59,11 +59,12 @@ class TrustedContentSyncService {
         'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image',
         'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id',
         'fields[taxonomy_term--trust_topics]' => 'name',
-        'fields[node--basic_page]' => 'title,body',
-        'fields[node--ucb_person]' => 'title,body',
-        'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail',
+        'fields[node--basic_page]' => 'title,body,changed',
+        'fields[node--ucb_person]' => 'title,body,changed',
+        'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail,changed',
         'fields[media--image]' => 'field_media_image',
         'fields[file--file]' => 'uri,url',
+        'sort' => '-node_id.changed',
       ]);
 
       $url = rtrim($base_url, '/') . '/jsonapi/trust_metadata/trust_metadata?' . $query;
@@ -120,57 +121,60 @@ protected function saveEntity(array $item, array $included, string $site): void 
   $nodeId = $nodeRef['id'] ?? null;
   $nodeType = $nodeRef['type'] ?? null;
 
-  $this->logger->info('Processing item @uuid with node @type:@id', [
-    '@uuid' => $uuid,
-    '@type' => $nodeType,
-    '@id' => $nodeId,
-  ]);
-
   $relatedNode = $this->findIncludedById($included, $nodeType, $nodeId);
-  if (!$relatedNode) {
-    $this->logger->warning('Related node not found for @type:@id', ['@type' => $nodeType, '@id' => $nodeId]);
+  if (!$relatedNode || empty($relatedNode['attributes'])) {
+    $this->logger->warning('Related node not found or missing attributes for @type:@id', ['@type' => $nodeType, '@id' => $nodeId]);
+    return;
   }
 
-  $nodeAttrs = $relatedNode['attributes'] ?? [];
-  $title = $nodeAttrs['title'] ?? 'Untitled';
-  $summary = '';
+  $nodeAttrs = $relatedNode['attributes'];
+  $remoteChanged = strtotime($nodeAttrs['changed'] ?? '0');
 
-  switch ($nodeType) {
-    case 'node--ucb_article':
-      $summary = $nodeAttrs['field_ucb_article_summary'] ?? '';
-      break;
-    case 'node--ucb_person':
-    case 'node--basic_page':
-      $summary = $nodeAttrs['body']['summary'] ?? '';
-      break;
-  }
-
-  // Load or create the entity before setting fields.
+  // Load existing entity (if any)
   $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
   $entities = $storage->loadByProperties(['uuid' => $uuid]);
-  $entity = reset($entities) ?: $storage->create(['uuid' => $uuid]);
+  $entity = reset($entities);
 
-  // Map topic names to local taxonomy term IDs.
+  if ($entity) {
+    $localLastFetched = (int) $entity->get('last_fetched')->value;
+    if ($remoteChanged <= $localLastFetched) {
+      $this->logger->notice('Skipped entity @uuid, already up-to-date.', ['@uuid' => $uuid]);
+      return;
+    }
+  }
+  else {
+    $entity = $storage->create(['uuid' => $uuid]);
+  }
+
+  // Title and Summary
+  $title = $nodeAttrs['title'] ?? 'Untitled';
+  $summary = match ($nodeType) {
+    'node--ucb_article' => $nodeAttrs['field_ucb_article_summary'] ?? '',
+    default => $nodeAttrs['body']['summary'] ?? '',
+  };
+
+  // Trust Role / Scope Validation
+  $trustRole = $attributes['trust_role'] ?? '';
+  $trustScope = $attributes['trust_scope'] ?? '';
+  $allowedRoles = ['primary_source', 'secondary_source', 'subject_matter_contributor', 'unverified'];
+  $allowedScopes = ['department_level', 'college_level', 'administrative_unit', 'campus_wide'];
+
+  // Match trust_topics terms
   $topicTerms = [];
   foreach ($relationships['trust_topics']['data'] ?? [] as $topicRef) {
     $topic = $this->findIncludedById($included, $topicRef['type'], $topicRef['id']);
-    if (!empty($topic['attributes']['name'])) {
-      $remoteName = $topic['attributes']['name'];
-      $this->logger->info('Looking up local term for remote topic: @remote', ['@remote' => $remoteName]);
+    $remoteName = $topic['attributes']['name'] ?? null;
 
+    if ($remoteName) {
       $matches = \Drupal::entityTypeManager()
         ->getStorage('taxonomy_term')
         ->loadByProperties([
           'name' => $remoteName,
           'vid' => 'trust_topics',
         ]);
-
       if ($localTerm = reset($matches)) {
-        $this->logger->notice('Matched topic "@remote" to local term ID: @id', [
-          '@remote' => $remoteName,
-          '@id' => $localTerm->id(),
-        ]);
         $topicTerms[] = $localTerm->id();
+        $this->logger->notice('Matched topic "@remote" to local term ID: @id', ['@remote' => $remoteName, '@id' => $localTerm->id()]);
       }
       else {
         $this->logger->warning('No local match found for remote topic: @remote', ['@remote' => $remoteName]);
@@ -178,46 +182,23 @@ protected function saveEntity(array $item, array $included, string $site): void 
     }
   }
 
-  // Set fields on the entity.
+  // Assign all fields
   $entity->set('title', $title);
   $entity->set('summary', $summary);
-
-// Validate and set trust_role.
-$role = $attributes['trust_role'] ?? '';
-$allowed_roles = ['primary_source', 'secondary_source', 'subject_matter_contributor', 'unverified'];
-if (in_array($role, $allowed_roles, TRUE)) {
-  $entity->set('trust_role', $role);
-}
-else {
-  $this->logger->warning('Invalid trust_role received: @role', ['@role' => $role]);
-  $entity->set('trust_role', ''); // or skip setting it entirely
-}
-
-// Validate and set trust_scope.
-$scope = $attributes['trust_scope'] ?? '';
-$allowed_scopes = ['department_level', 'college_level', 'administrative_unit', 'campus_wide'];
-if (in_array($scope, $allowed_scopes, TRUE)) {
-  $entity->set('trust_scope', $scope);
-}
-else {
-  $this->logger->warning('Invalid trust_scope received: @scope', ['@scope' => $scope]);
-  $entity->set('trust_scope', '');
-}
-
+  $entity->set('trust_role', in_array($trustRole, $allowedRoles, true) ? $trustRole : '');
+  $entity->set('trust_scope', in_array($trustScope, $allowedScopes, true) ? $trustScope : '');
   $entity->set('remote_type', $nodeType);
   $entity->set('source_site', $site);
   $entity->set('source_url', $relatedNode['links']['self']['href'] ?? '');
   $entity->set('jsonapi_payload', json_encode($item));
-  $entity->set('last_fetched', \Drupal::time()->getRequestTime());
+  $entity->set('last_fetched', $remoteChanged);
   $entity->set('trust_topics', $topicTerms);
 
   $entity->save();
 
-  $this->logger->notice('💾 Saved entity @uuid with title: @title', [
-    '@uuid' => $uuid,
-    '@title' => $title,
-  ]);
+  $this->logger->notice('💾 Saved entity @uuid with title: @title', ['@uuid' => $uuid, '@title' => $title]);
 }
+
 
     protected function findIncludedById(array $included, string $type, string $id): ?array {
       foreach ($included as $entry) {

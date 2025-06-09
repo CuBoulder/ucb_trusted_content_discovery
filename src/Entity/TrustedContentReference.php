@@ -54,6 +54,10 @@ class TrustedContentReference extends ContentEntityBase {
     $fields['summary'] = BaseFieldDefinition::create('string_long')
       ->setLabel(t('Summary'));
 
+    $fields['last_updated'] = BaseFieldDefinition::create('timestamp')
+    ->setLabel(t('Last Updated on Remote'))
+    ->setDescription(t('Timestamp from the remote node\'s "changed" field.'));
+
     $fields['trust_role'] = BaseFieldDefinition::create('list_string')
       ->setLabel(t('Trust Role'))
       ->setDescription(t('The trust role of the content.'))
