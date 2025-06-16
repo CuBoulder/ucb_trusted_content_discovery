@@ -119,6 +119,12 @@ class TrustedContentReference extends ContentEntityBase {
     $fields['last_fetched'] = BaseFieldDefinition::create('timestamp')
       ->setLabel(t('Last Fetched'));
 
+    $fields['remote_path'] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Remote Path'))
+      ->setDescription(t('The URL path or alias of the remote node (e.g. /2025/06/my-article).'))
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
     $fields['langcode'] = BaseFieldDefinition::create('language')
       ->setLabel(t('Language'))
       ->setRequired(TRUE)

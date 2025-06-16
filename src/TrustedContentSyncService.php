@@ -55,20 +55,19 @@ class TrustedContentSyncService {
         $this->logger->error('No valid URL defined for site: @site', ['@site' => $site_name]);
         continue;
       }
-    // TO DO - filter by enabled only -
+    // Query for all node types
     $query = http_build_query([
       'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image',
       'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id,trust_syndication_enabled',
       'fields[taxonomy_term--trust_topics]' => 'name',
-      'fields[node--basic_page]' => 'title,body,changed,nid',
-      'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid',
-      'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail,changed,nid',
+      'fields[node--basic_page]' => 'title,body,changed,nid,path',
+      'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid,path',
+      'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail,changed,nid,path',
       'fields[media--image]' => 'field_media_image',
       'fields[file--file]' => 'uri,url',
       'sort' => '-node_id.changed',
       'filter[trust_syndication_enabled][value]' => '1'
     ]);
-
 
       $url = rtrim($base_url, '/') . '/jsonapi/trust_metadata/trust_metadata?' . $query;
       $this->logger->notice('Requesting URL: @url', ['@url' => $url]);
@@ -84,7 +83,6 @@ class TrustedContentSyncService {
         ]);
 
         $this->logger->notice('Setting Host header to: @host', ['@host' => parse_url($publicBase, PHP_URL_HOST)]);
-
 
         $raw = (string) $response->getBody();
         file_put_contents('/tmp/trusted-content.json', $raw);
@@ -182,14 +180,20 @@ class TrustedContentSyncService {
       }
     }
 
+    // Get the node url
+    $remotePath = $nodeAttrs['path']['alias'] ?? '/node/' . ($nodeAttrs['nid'] ?? $remoteNid ?? 'UNKNOWN');
+
+    // Save all the fields to the entity on create or update
     $entity->set('title', $title);
     $entity->set('summary', $summary);
     $entity->set('trust_role', in_array($trustRole, $allowedRoles, true) ? $trustRole : '');
     $entity->set('trust_scope', in_array($trustScope, $allowedScopes, true) ? $trustScope : '');
     $entity->set('remote_type', $nodeType);
-    $entity->set('source_site', $site);
+    // Store the public - facing link for reference later -- link to article and use in web component.
+    $entity->set('source_site', $publicBase);
     $sourceUrl = $relatedNode['links']['self']['href'] ?? '';
     $entity->set('source_url', $this->normalizeUrl($sourceUrl, $internalBase, $publicBase));
+    $entity->set('remote_path', $remotePath);
     $entity->set('jsonapi_payload', json_encode($item));
     $entity->set('last_fetched', $remoteChanged);
     $entity->set('trust_topics', $topicTerms);
