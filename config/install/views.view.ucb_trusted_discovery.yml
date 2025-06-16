@@ -1,3 +1,4 @@
+uuid: 844e7780-6013-43a2-8ed3-71eb8db772e0
 langcode: en
 status: true
 dependencies:
@@ -385,6 +386,20 @@ display:
           perm: 'access content'
       cache:
         type: tag
+      empty:
+        area:
+          id: area
+          table: views
+          field: area
+          relationship: none
+          group_type: group
+          admin_label: ''
+          plugin_id: text
+          empty: true
+          content:
+            value: "<div class=\"container\">\r\n<p><strong>No results found</strong></p>\r\n</div>"
+            format: full_html
+          tokenize: false
       filters:
         trust_scope:
           id: trust_scope
@@ -573,13 +588,7 @@ display:
           plugin_id: standard
           required: false
       group_by: true
-      header:
-        area_text_custom:
-          id: area_text_custom
-          table: views
-          field: area_text_custom
-          plugin_id: text
-          content: 'Trusted Content Results'
+      header: {  }
       display_extenders: {  }
     cache_metadata:
       max-age: -1
