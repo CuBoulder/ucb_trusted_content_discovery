@@ -154,6 +154,13 @@ class TrustedContentReference extends ContentEntityBase {
       ->setLabel(t('Focal Image Square'))
       ->setDescription(t('URL for the square image style.'));
 
+    $fields['remote_nid'] = BaseFieldDefinition::create('integer')
+      ->setLabel(t('Remote Node ID'))
+      ->setDescription(t('The internal Drupal node ID of the referenced content.'))
+      ->setRequired(TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
     return $fields;
   }
 

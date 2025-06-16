@@ -60,9 +60,9 @@ class TrustedContentSyncService {
       'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image',
       'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id,trust_syndication_enabled',
       'fields[taxonomy_term--trust_topics]' => 'name',
-      'fields[node--basic_page]' => 'title,body,changed',
-      'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo',
-      'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail,changed',
+      'fields[node--basic_page]' => 'title,body,changed,nid',
+      'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid',
+      'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail,changed,nid',
       'fields[media--image]' => 'field_media_image',
       'fields[file--file]' => 'uri,url',
       'sort' => '-node_id.changed',
@@ -152,6 +152,8 @@ class TrustedContentSyncService {
     }
 
     $title = $nodeAttrs['title'] ?? 'Untitled';
+    $remoteNid = $nodeRef['meta']['drupal_internal__target_id'] ?? null;
+
     $summary = match ($nodeType) {
       'node--ucb_article' => $nodeAttrs['field_ucb_article_summary'] ?? '',
       default => $nodeAttrs['body']['summary'] ?? '',
@@ -191,6 +193,7 @@ class TrustedContentSyncService {
     $entity->set('jsonapi_payload', json_encode($item));
     $entity->set('last_fetched', $remoteChanged);
     $entity->set('trust_topics', $topicTerms);
+    $entity->set('remote_nid', $remoteNid);
 
     $focalWide = null;
     $focalSquare = null;
