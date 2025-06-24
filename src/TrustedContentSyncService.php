@@ -27,30 +27,28 @@ class TrustedContentSyncService {
   }
 
   public function run() {
-    $this->logger->notice('run() method called on TrustedContentSyncService');
 
     $config = $this->configFactory->get('ucb_trusted_content_discovery.sites');
     $sites = $config->get('sites') ?? [];
 
+    // no sites in config
     if (empty($sites)) {
-      $this->logger->warning('No sites configured in ucb_trusted_content_discovery.sites');
       return;
     }
 
     $isDdev = getenv('IS_DDEV_PROJECT') === 'true';
-
+    // iterate over config, process sites
     foreach ($sites as $site_name => $site_info) {
-      $this->logger->notice('Syncing from site: @site', ['@site' => $site_name]);
 
       $publicBase = rtrim($site_info['public'] ?? '', '/');
       $internalBase = rtrim($site_info['internal'] ?? '', '/');
       $base_url = $publicBase;
-
+      // internal
       if ($isDdev && !empty($internalBase)) {
         $base_url = $internalBase;
         $this->logger->notice('Using internal URL for DDEV: @internal', ['@internal' => $internalBase]);
       }
-
+      // no valid url
       if (empty($base_url)) {
         $this->logger->error('No valid URL defined for site: @site', ['@site' => $site_name]);
         continue;
@@ -70,7 +68,6 @@ class TrustedContentSyncService {
     ]);
 
       $url = rtrim($base_url, '/') . '/jsonapi/trust_metadata/trust_metadata?' . $query;
-      $this->logger->notice('Requesting URL: @url', ['@url' => $url]);
 
       try {
         $response = $this->httpClient->get($url, [
@@ -82,26 +79,17 @@ class TrustedContentSyncService {
           'verify' => !$isDdev,
         ]);
 
-        $this->logger->notice('Setting Host header to: @host', ['@host' => parse_url($publicBase, PHP_URL_HOST)]);
-
         $raw = (string) $response->getBody();
         file_put_contents('/tmp/trusted-content.json', $raw);
 
-        $this->logger->notice('Full JSON response: @full', ['@full' => $raw]);
-        $this->logger->notice('Response status code: @code', ['@code' => $response->getStatusCode()]);
-
         $json = json_decode($raw, true);
-        $this->logger->debug('Decoded JSON: @json', ['@json' => print_r($json, true)]);
 
         if (!is_array($json) || !isset($json['data'])) {
           $this->logger->error('Invalid or missing "data" key in JSON response from @url', ['@url' => $url]);
           continue;
         }
 
-        $this->logger->notice('Fetched @count items', ['@count' => count($json['data'])]);
-
         foreach ($json['data'] as $item) {
-          $this->logger->notice('Processing item ID: @id', ['@id' => $item['id'] ?? 'unknown']);
           $this->saveEntity($item, $json['included'] ?? [], $site_name, $internalBase, $publicBase);
         }
       }
@@ -112,8 +100,8 @@ class TrustedContentSyncService {
   }
 
   protected function saveEntity(array $item, array $included, string $site, string $internalBase, string $publicBase): void {
+    // skip item with missing attributes
     if (empty($item['id']) || empty($item['attributes'])) {
-      $this->logger->warning('Skipping item with missing ID or attributes.');
       return;
     }
 
@@ -125,9 +113,9 @@ class TrustedContentSyncService {
     $nodeId = $nodeRef['id'] ?? null;
     $nodeType = $nodeRef['type'] ?? null;
 
+    // related node not found
     $relatedNode = $this->findIncludedById($included, $nodeType, $nodeId);
     if (!$relatedNode || empty($relatedNode['attributes'])) {
-      $this->logger->warning('Related node not found or missing attributes for @type:@id', ['@type' => $nodeType, '@id' => $nodeId]);
       return;
     }
 
@@ -140,15 +128,15 @@ class TrustedContentSyncService {
 
     if ($entity) {
       $localLastFetched = (int) $entity->get('last_fetched')->value;
+      // Already up to date
       if ($remoteChanged <= $localLastFetched) {
-        $this->logger->notice('Skipped entity @uuid, already up-to-date.', ['@uuid' => $uuid]);
         return;
       }
     }
     else {
       $entity = $storage->create(['uuid' => $uuid]);
     }
-
+    // create
     $title = $nodeAttrs['title'] ?? 'Untitled';
     $remoteNid = $nodeRef['meta']['drupal_internal__target_id'] ?? null;
 
@@ -170,9 +158,9 @@ class TrustedContentSyncService {
         $matches = \Drupal::entityTypeManager()
           ->getStorage('taxonomy_term')
           ->loadByProperties(['name' => $remoteName, 'vid' => 'trust_topics']);
+        // match topics
         if ($localTerm = reset($matches)) {
           $topicTerms[] = $localTerm->id();
-          $this->logger->notice('Matched topic "@remote" to local term ID: @id', ['@remote' => $remoteName, '@id' => $localTerm->id()]);
         }
         else {
           $this->logger->warning('No local match found for remote topic: @remote', ['@remote' => $remoteName]);
@@ -232,7 +220,6 @@ class TrustedContentSyncService {
     $entity->set('focal_image_square', $focalSquare);
 
     $entity->save();
-    $this->logger->notice('💾 Saved entity @uuid with title: @title', ['@uuid' => $uuid, '@title' => $title]);
   }
 
   protected function findIncludedById(array $included, string $type, string $id): ?array {

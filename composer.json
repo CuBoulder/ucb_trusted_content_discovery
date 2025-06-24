@@ -1,0 +1,6 @@
+{
+    "name": "cu-boulder/ucb_trusted_content_discovery",
+    "description": "University of Colorado Boulder Trusted Content Discovery Module",
+    "license": "GPL-2.0-or-later",
+    "type": "drupal-custom-module"
+}
