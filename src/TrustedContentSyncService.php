@@ -206,11 +206,11 @@ class TrustedContentSyncService {
           $file = $this->findIncludedById($included, 'file--file', $fileId);
 
           if (!empty($file['links']['focal_image_wide']['href'])) {
-            $focalWide = $this->normalizeUrl($file['links']['focal_image_wide']['href'], $internalBase, $publicBase);
+            $focalWide = $this->$file['links']['focal_image_wide']['href'];
           }
 
           if (!empty($file['links']['focal_image_square']['href'])) {
-            $focalSquare = $this->normalizeUrl($file['links']['focal_image_square']['href'], $internalBase, $publicBase);
+            $focalSquare = $this->$file['links']['focal_image_square']['href'];
           }
         }
       }
@@ -228,11 +228,11 @@ class TrustedContentSyncService {
           $file = $this->findIncludedById($included, 'file--file', $fileId);
 
           if (!empty($file['links']['focal_image_wide']['href'])) {
-            $focalWide = $this->normalizeUrl($file['links']['focal_image_wide']['href'], $internalBase, $publicBase);
+            $focalWide = $this->$file['links']['focal_image_wide']['href'];
           }
 
           if (!empty($file['links']['focal_image_square']['href'])) {
-            $focalSquare = $this->normalizeUrl($file['links']['focal_image_square']['href'], $internalBase, $publicBase);
+            $focalSquare = $this->$file['links']['focal_image_square']['href'];
           }
         }
       }
