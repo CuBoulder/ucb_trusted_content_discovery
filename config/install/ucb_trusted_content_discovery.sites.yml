@@ -1,4 +1,10 @@
 sites:
-  trusted-site:
-    public: 'https://trusted-site.ddev.site'
-    internal: 'http://trusted-site-web'
+  provider-a:
+    public: 'https://www.colorado.edu/trust/provider-a/'
+    internal: ''
+  provider-b:
+    public: 'https://www.colorado.edu/trust/provider-b/'
+    internal: ''
+  provider-c:
+    public: 'https://www.colorado.edu/trust/provider-c/'
+    internal: ''
