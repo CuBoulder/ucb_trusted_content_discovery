@@ -55,10 +55,10 @@ class TrustedContentSyncService {
       }
     // Query for all node types
     $query = http_build_query([
-      'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image',
+      'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image,node_id.field_social_sharing_image,node_id.field_social_sharing_image.field_media_image',
       'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id,trust_syndication_enabled',
       'fields[taxonomy_term--trust_topics]' => 'name',
-      'fields[node--basic_page]' => 'title,body,changed,nid,path',
+      'fields[node--basic_page]' => 'title,body,changed,nid,path,field_social_sharing_image',
       'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid,path',
       'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail,changed,nid,path',
       'fields[media--image]' => 'field_media_image',
@@ -195,6 +195,28 @@ class TrustedContentSyncService {
       if (!$thumbnailRel && $nodeType === 'node--ucb_person') {
         $thumbnailRel = $relatedNode['relationships']['field_ucb_person_photo']['data'] ?? null;
       }
+
+      if ($thumbnailRel) {
+        $mediaId = $thumbnailRel['id'] ?? null;
+        $media = $this->findIncludedById($included, 'media--image', $mediaId);
+
+        if ($media) {
+          $fileRel = $media['relationships']['field_media_image']['data'] ?? null;
+          $fileId = $fileRel['id'] ?? null;
+          $file = $this->findIncludedById($included, 'file--file', $fileId);
+
+          if (!empty($file['links']['focal_image_wide']['href'])) {
+            $focalWide = $this->normalizeUrl($file['links']['focal_image_wide']['href'], $internalBase, $publicBase);
+          }
+
+          if (!empty($file['links']['focal_image_square']['href'])) {
+            $focalSquare = $this->normalizeUrl($file['links']['focal_image_square']['href'], $internalBase, $publicBase);
+          }
+        }
+      }
+    }
+    elseif ($nodeType === 'node--basic_page') {
+      $thumbnailRel = $relatedNode['relationships']['field_social_sharing_image']['data'] ?? null;
 
       if ($thumbnailRel) {
         $mediaId = $thumbnailRel['id'] ?? null;
