@@ -37,6 +37,7 @@ class TrustedContentSyncService {
     }
 
     $isDdev = getenv('IS_DDEV_PROJECT') === 'true';
+
     // iterate over config, process sites
     foreach ($sites as $site_name => $site_info) {
 
@@ -62,7 +63,7 @@ class TrustedContentSyncService {
       'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid,path',
       'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail,changed,nid,path',
       'fields[media--image]' => 'field_media_image',
-      'fields[file--file]' => 'uri,url',
+      'fields[file--file]' => 'uri,url, alt',
       'sort' => '-node_id.changed',
       'filter[trust_syndication_enabled][value]' => '1'
     ]);
@@ -89,9 +90,22 @@ class TrustedContentSyncService {
           continue;
         }
 
+        // store list of sites to delete stale
+        $seenRemoteUuids = [];
+
         foreach ($json['data'] as $item) {
+          $remote_uuid = $this->generateRemoteUuid($publicBase, $item['id'] ?? '');
+          if (empty($remote_uuid)) {
+            $this->logger->warning('Skipping item with empty remote UUID seed');
+            continue;
+          }
+          // add uuid to collection save
+          $seenRemoteUuids[] = $remote_uuid;
           $this->saveEntity($item, $json['included'] ?? [], $site_name, $internalBase, $publicBase);
         }
+        // run delete
+        $this->removeStaleEntities($publicBase, $seenRemoteUuids);
+
       }
       catch (\Exception $e) {
         $this->logger->error('Error: @msg', ['@msg' => $e->getMessage()]);
@@ -105,7 +119,11 @@ class TrustedContentSyncService {
       return;
     }
 
-    $uuid = $item['id'];
+    $remote_uuid = $this->generateRemoteUuid($publicBase, $item['id'] ?? '');
+    if (empty($remote_uuid)) {
+      $this->logger->warning('Skipping item with empty remote UUID seed');
+      return;
+    }
     $attributes = $item['attributes'];
     $relationships = $item['relationships'] ?? [];
 
@@ -123,19 +141,24 @@ class TrustedContentSyncService {
     $remoteChanged = strtotime($nodeAttrs['changed'] ?? '0');
 
     $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
-    $entities = $storage->loadByProperties(['uuid' => $uuid]);
+    $entities = $storage->loadByProperties([
+      'remote_uuid' => $remote_uuid,
+      'source_site' => $publicBase,
+    ]);
     $entity = reset($entities);
 
     if ($entity) {
       $localLastFetched = (int) $entity->get('last_fetched')->value;
-      // Already up to date
       if ($remoteChanged <= $localLastFetched) {
         return;
       }
     }
     else {
-      $entity = $storage->create(['uuid' => $uuid]);
+      $entity = $storage->create();
+      $entity->set('remote_uuid', $remote_uuid);
+      $entity->set('source_site', $publicBase);
     }
+
     // create
     $title = $nodeAttrs['title'] ?? 'Untitled';
     $remoteNid = $nodeRef['meta']['drupal_internal__target_id'] ?? null;
@@ -189,6 +212,7 @@ class TrustedContentSyncService {
 
     $focalWide = null;
     $focalSquare = null;
+    $altText = null;
 
     if (in_array($nodeType, ['node--ucb_article', 'node--ucb_person'], true)) {
       $thumbnailRel = $relatedNode['relationships']['field_ucb_article_thumbnail']['data'] ?? null;
@@ -204,6 +228,7 @@ class TrustedContentSyncService {
           $fileRel = $media['relationships']['field_media_image']['data'] ?? null;
           $fileId = $fileRel['id'] ?? null;
           $file = $this->findIncludedById($included, 'file--file', $fileId);
+          $altText = $fileRel['meta']['alt'] ?? null;
 
           if (!empty($file['links']['focal_image_wide']['href'])) {
             $focalWide = html_entity_decode($file['links']['focal_image_wide']['href']);
@@ -226,6 +251,7 @@ class TrustedContentSyncService {
           $fileRel = $media['relationships']['field_media_image']['data'] ?? null;
           $fileId = $fileRel['id'] ?? null;
           $file = $this->findIncludedById($included, 'file--file', $fileId);
+          $altText = $fileRel['meta']['alt'] ?? null;
 
           if (!empty($file['links']['focal_image_wide']['href'])) {
             $focalWide = html_entity_decode($file['links']['focal_image_wide']['href']);
@@ -240,6 +266,7 @@ class TrustedContentSyncService {
 
     $entity->set('focal_image_wide', $focalWide);
     $entity->set('focal_image_square', $focalSquare);
+    $entity->set('focal_image_alt', $altText);
 
     $entity->save();
   }
@@ -259,4 +286,36 @@ class TrustedContentSyncService {
     }
     return $url;
   }
+
+  protected function generateRemoteUuid(string $site, string $remoteId): string {
+    if (empty($remoteId)) {
+      return '';
+    }
+    return md5($site . ':' . $remoteId);
+  }
+
+  protected function removeStaleEntities(string $sourceSite, array $seenRemoteUuids): void {
+    $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
+
+    $query = $storage->getQuery()
+      ->accessCheck(FALSE)
+      ->condition('source_site', $sourceSite);
+
+    if (!empty($seenRemoteUuids)) {
+      $query->condition('remote_uuid', $seenRemoteUuids, 'NOT IN');
+    }
+
+    $ids = $query->execute();
+
+    if (!empty($ids)) {
+      $entities = $storage->loadMultiple($ids);
+      $storage->delete($entities);
+      $this->logger->notice('Deleted @count stale entries from @site', [
+        '@count' => count($ids),
+        '@site' => $sourceSite,
+      ]);
+  }
+}
+
+
 }

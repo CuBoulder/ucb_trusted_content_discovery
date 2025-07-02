@@ -43,6 +43,23 @@ class TrustedContentReference extends ContentEntityBase {
       ->setRequired(TRUE)
       ->setReadOnly(TRUE);
 
+    $fields['remote_uuid'] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Remote UUID'))
+      ->setDescription(t('A deterministic UUID generated from site + remote resource ID.'))
+      ->setRequired(TRUE)
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'string',
+        'weight' => -5,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'string_textfield',
+        'weight' => -5,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
     $fields['remote_type'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Remote Content Type'))
       ->setRequired(TRUE);
@@ -166,6 +183,21 @@ class TrustedContentReference extends ContentEntityBase {
       ->setRequired(TRUE)
       ->setDisplayConfigurable('view', TRUE)
       ->setDisplayConfigurable('filter', TRUE);
+
+    $fields['focal_image_alt'] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Focal Image Alt Text'))
+      ->setDescription(t('Alt text for the focal image.'))
+      ->setDisplayOptions('form', [
+        'type' => 'string_textfield',
+        'weight' => 7,
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'string',
+        'weight' => 7,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE);
 
     return $fields;
   }
