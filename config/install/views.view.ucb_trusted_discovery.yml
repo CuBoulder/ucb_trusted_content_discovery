@@ -436,9 +436,24 @@ display:
           separator: ', '
           field_api_classes: false
       pager:
-        type: some
+        type: mini
         options:
+          offset: 0
+          pagination_heading_level: h4
           items_per_page: 25
+          total_pages: null
+          id: 0
+          tags:
+            next: 'Next ›'
+            previous: '‹ Previous'
+          expose:
+            items_per_page: false
+            items_per_page_label: 'Items per page'
+            items_per_page_options: '5, 10, 25, 50'
+            items_per_page_options_all: false
+            items_per_page_options_all_label: '- All -'
+            offset: false
+            offset_label: Offset
       exposed_form:
         type: basic
         options:
@@ -652,6 +667,9 @@ display:
           plugin_id: standard
           required: false
       group_by: true
+      use_more: true
+      use_more_always: true
+      use_more_text: more
       header: {  }
       display_extenders: {  }
     cache_metadata:
@@ -660,6 +678,7 @@ display:
         - 'languages:language_content'
         - 'languages:language_interface'
         - url
+        - url.query_args
         - user.permissions
       tags: {  }
   page_1:
@@ -748,5 +767,6 @@ display:
         - 'languages:language_content'
         - 'languages:language_interface'
         - url
+        - url.query_args
         - user.permissions
       tags: {  }

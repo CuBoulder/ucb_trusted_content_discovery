@@ -71,19 +71,7 @@ class TrustedContentSyncService {
       $url = rtrim($base_url, '/') . '/jsonapi/trust_metadata/trust_metadata?' . $query;
 
       try {
-        $response = $this->httpClient->get($url, [
-          'headers' => [
-            'Accept' => 'application/json',
-            // Add this if using internalBase
-            'Host' => parse_url($publicBase, PHP_URL_HOST),
-          ],
-          'verify' => !$isDdev,
-        ]);
-
-        $raw = (string) $response->getBody();
-        file_put_contents('/tmp/trusted-content.json', $raw);
-
-        $json = json_decode($raw, true);
+        $json = $this->fetchAllPaginated($url, $publicBase, $isDdev);
 
         if (!is_array($json) || !isset($json['data'])) {
           $this->logger->error('Invalid or missing "data" key in JSON response from @url', ['@url' => $url]);
@@ -93,7 +81,7 @@ class TrustedContentSyncService {
         // store list of sites to delete stale
         $seenRemoteUuids = [];
 
-        foreach ($json['data'] as $item) {
+        foreach ($json['data'] ?? [] as $item) {
           $remote_uuid = $this->generateRemoteUuid($publicBase, $item['id'] ?? '');
           if (empty($remote_uuid)) {
             $this->logger->warning('Skipping item with empty remote UUID seed');
@@ -316,6 +304,46 @@ class TrustedContentSyncService {
       ]);
   }
 }
+
+protected function fetchAllPaginated(string $url, string $publicBase, bool $isDdev, array $accumulated = []): array {
+  try {
+    $this->logger->info("📥 Fetching page: $url");
+
+    $response = $this->httpClient->get($url, [
+      'headers' => [
+        'Accept' => 'application/json',
+        'Host' => parse_url($publicBase, PHP_URL_HOST),
+      ],
+      'verify' => !$isDdev,
+    ]);
+
+    $json = json_decode((string) $response->getBody(), true);
+
+    if (!is_array($json) || !isset($json['data'])) {
+      $this->logger->error('⚠️ Invalid JSON response from: @url', ['@url' => $url]);
+      return $accumulated;
+    }
+
+    $accumulated['data'] = array_merge($accumulated['data'] ?? [], $json['data']);
+    if (isset($json['included'])) {
+      $accumulated['included'] = array_merge($accumulated['included'] ?? [], $json['included']);
+    }
+
+    if (!empty($json['links']['next']['href'])) {
+      $nextUrl = $json['links']['next']['href'];
+      $this->logger->info("➡️ Next page detected: $nextUrl");
+      return $this->fetchAllPaginated($nextUrl, $publicBase, $isDdev, $accumulated);
+    }
+
+    $this->logger->info("✅ No more pages. Total items: " . count($accumulated['data'] ?? []));
+    return $accumulated;
+
+  } catch (\Exception $e) {
+    $this->logger->error('❌ Pagination fetch failed: @msg', ['@msg' => $e->getMessage()]);
+    return $accumulated;
+  }
+}
+
 
 
 }
