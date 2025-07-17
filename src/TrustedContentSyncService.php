@@ -307,7 +307,7 @@ class TrustedContentSyncService {
 
 protected function fetchAllPaginated(string $url, string $publicBase, bool $isDdev, array $accumulated = []): array {
   try {
-    $this->logger->info("📥 Fetching page: $url");
+    $this->logger->info("Fetching page: $url");
 
     $response = $this->httpClient->get($url, [
       'headers' => [
@@ -320,7 +320,7 @@ protected function fetchAllPaginated(string $url, string $publicBase, bool $isDd
     $json = json_decode((string) $response->getBody(), true);
 
     if (!is_array($json) || !isset($json['data'])) {
-      $this->logger->error('⚠️ Invalid JSON response from: @url', ['@url' => $url]);
+      $this->logger->error('Invalid JSON response from: @url', ['@url' => $url]);
       return $accumulated;
     }
 
@@ -331,15 +331,15 @@ protected function fetchAllPaginated(string $url, string $publicBase, bool $isDd
 
     if (!empty($json['links']['next']['href'])) {
       $nextUrl = $json['links']['next']['href'];
-      $this->logger->info("➡️ Next page detected: $nextUrl");
+      $this->logger->info("Next page detected: $nextUrl");
       return $this->fetchAllPaginated($nextUrl, $publicBase, $isDdev, $accumulated);
     }
 
-    $this->logger->info("✅ No more pages. Total items: " . count($accumulated['data'] ?? []));
+    $this->logger->info("No more pages. Total items: " . count($accumulated['data'] ?? []));
     return $accumulated;
 
   } catch (\Exception $e) {
-    $this->logger->error('❌ Pagination fetch failed: @msg', ['@msg' => $e->getMessage()]);
+    $this->logger->error('Pagination fetch failed: @msg', ['@msg' => $e->getMessage()]);
     return $accumulated;
   }
 }
