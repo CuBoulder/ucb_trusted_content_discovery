@@ -106,6 +106,19 @@ $data['ucb_trusted_content_reference__trust_topics']['trust_topics_target_id'] =
       'id' => 'standard',
     ],
   ];
+
+    // Join telemetry table on UUID.
+$data['ucb_trusted_content_reference']['telemetry'] = [
+    'title' => t('Telemetry by Remote UUID'),
+    'help' => t('Join telemetry table where reference_uuid matches remote_uuid.'),
+    'relationship' => [
+      'id' => 'standard',
+      'base' => 'ucb_trusted_content_telemetry',
+      'base field' => 'reference_uuid',
+      'relationship field' => 'remote_uuid',
+      'label' => t('Telemetry'),
+    ],
+  ];
 }
 
 
