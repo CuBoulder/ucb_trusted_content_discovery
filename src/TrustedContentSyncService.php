@@ -82,17 +82,29 @@ class TrustedContentSyncService {
         $seenRemoteUuids = [];
 
         foreach ($json['data'] ?? [] as $item) {
-          $remote_uuid = $this->generateRemoteUuid($publicBase, $item['id'] ?? '');
-          if (empty($remote_uuid)) {
-            $this->logger->warning('Skipping item with empty remote UUID seed');
+          $id = $item['id'] ?? null;
+
+          // if missing id, log and skip
+          if (empty($id)) {
+            $this->logger->warning('Skipping item with missing ID: @item', [
+              '@item' => json_encode($item),
+            ]);
             continue;
           }
-          // add uuid to collection save
-          $seenRemoteUuids[] = $remote_uuid;
+
+          $remote_uuid = $this->generateRemoteUuid($publicBase, $id);
+
+          // save entity first — may create a new one
           $this->saveEntity($item, $json['included'] ?? [], $site_name, $internalBase, $publicBase);
+
+          // only track UUID if it's valid
+          if (!empty($remote_uuid)) {
+            $seenRemoteUuids[] = $remote_uuid;
+          }
         }
+
         // run delete
-        $this->removeStaleEntities($publicBase, $seenRemoteUuids);
+        $this->removeStaleEntities($publicBase, array_filter($seenRemoteUuids));
 
       }
       catch (\Exception $e) {
