@@ -135,17 +135,34 @@ class TrustedContentSyncService {
     ]);
     $entity = reset($entities);
 
+    $is_update = FALSE;
+
     if ($entity) {
       $localLastFetched = (int) $entity->get('last_fetched')->value;
       if ($remoteChanged <= $localLastFetched) {
+        // log telemetry inline
+        $telemetry_storage = $this->entityTypeManager->getStorage('ucb_trusted_content_telemetry');
+        $telemetry = $telemetry_storage->create([
+          'reference_uuid' => $remote_uuid,
+          'trusted_reference' => $entity->id(),
+          'fetched' => \Drupal::time()->getCurrentTime(),
+          'consumer_site_count' => isset($attributes['syndication_consumer_sites']) ? count($attributes['syndication_consumer_sites']) : 0,
+          'consumer_site_list' => isset($attributes['syndication_consumer_sites_list']) ? json_encode($attributes['syndication_consumer_sites_list']) : '',
+          'total_views' => $attributes['syndication_total_views'] ?? 0,
+        ]);
+        $telemetry->save();
         return;
       }
+
+      $is_update = TRUE;
     }
     else {
-      $entity = $storage->create();
-      $entity->set('remote_uuid', $remote_uuid);
-      $entity->set('source_site', $publicBase);
+      $entity = $storage->create([
+        'remote_uuid' => $remote_uuid,
+        'source_site' => $publicBase,
+      ]);
     }
+
 
     // create
     $title = $nodeAttrs['title'] ?? 'Untitled';
@@ -257,6 +274,18 @@ class TrustedContentSyncService {
     $entity->set('focal_image_alt', $altText);
 
     $entity->save();
+
+    // after saving the content reference, log telemetry
+    $telemetry_storage = $this->entityTypeManager->getStorage('ucb_trusted_content_telemetry');
+    $telemetry = $telemetry_storage->create([
+      'reference_uuid' => $remote_uuid,
+      'trusted_reference' => $entity->id(),
+      'fetched' => \Drupal::time()->getCurrentTime(),
+      'consumer_site_count' => isset($attributes['syndication_consumer_sites']) ? count($attributes['syndication_consumer_sites']) : 0,
+      'consumer_site_list' => isset($attributes['syndication_consumer_sites_list']) ? json_encode($attributes['syndication_consumer_sites_list']) : '',
+      'total_views' => $attributes['syndication_total_views'] ?? 0,
+    ]);
+    $telemetry->save();
   }
 
   protected function findIncludedById(array $included, string $type, string $id): ?array {
