@@ -57,7 +57,7 @@ class TrustedContentSyncService {
     // Query for all node types
     $query = http_build_query([
       'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image,node_id.field_social_sharing_image,node_id.field_social_sharing_image.field_media_image',
-      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id,trust_syndication_enabled',
+      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id,trust_syndication_enabled,syndication_consumer_sites,syndication_total_views,syndication_consumer_sites_list',
       'fields[taxonomy_term--trust_topics]' => 'name',
       'fields[node--basic_page]' => 'title,body,changed,nid,path,field_social_sharing_image',
       'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid,path',
@@ -114,6 +114,12 @@ class TrustedContentSyncService {
     }
     $attributes = $item['attributes'];
     $relationships = $item['relationships'] ?? [];
+    
+    // Debug: Log the raw attributes to see what we're getting
+    $this->logger->info('Raw attributes for @uuid: @attrs', [
+      '@uuid' => $item['id'] ?? 'unknown',
+      '@attrs' => json_encode($attributes),
+    ]);
 
     $nodeRef = $relationships['node_id']['data'] ?? null;
     $nodeId = $nodeRef['id'] ?? null;
@@ -146,7 +152,7 @@ class TrustedContentSyncService {
           'reference_uuid' => $remote_uuid,
           'trusted_reference' => $entity->id(),
           'fetched' => \Drupal::time()->getCurrentTime(),
-          'consumer_site_count' => isset($attributes['syndication_consumer_sites']) ? count($attributes['syndication_consumer_sites']) : 0,
+          'consumer_site_count' => $attributes['syndication_consumer_sites'] ?? 0,
           'consumer_site_list' => isset($attributes['syndication_consumer_sites_list']) ? json_encode($attributes['syndication_consumer_sites_list']) : '',
           'total_views' => $attributes['syndication_total_views'] ?? 0,
         ]);
@@ -273,6 +279,19 @@ class TrustedContentSyncService {
     $entity->set('focal_image_square', $focalSquare);
     $entity->set('focal_image_alt', $altText);
 
+    // Set syndication data from remote trust metadata
+    $consumerSites = $attributes['syndication_consumer_sites'] ?? 0;
+    $totalViews = $attributes['syndication_total_views'] ?? 0;
+    
+    $this->logger->info('Setting syndication data for @uuid: consumer_sites=@sites, total_views=@views', [
+      '@uuid' => $remote_uuid,
+      '@sites' => $consumerSites,
+      '@views' => $totalViews,
+    ]);
+    
+    $entity->set('syndication_consumer_sites', $consumerSites);
+    $entity->set('syndication_total_views', $totalViews);
+
     $entity->save();
 
     // after saving the content reference, log telemetry
@@ -331,10 +350,10 @@ class TrustedContentSyncService {
         '@count' => count($ids),
         '@site' => $sourceSite,
       ]);
+    }
   }
-}
 
-protected function fetchAllPaginated(string $url, string $publicBase, bool $isDdev, array $accumulated = []): array {
+  protected function fetchAllPaginated(string $url, string $publicBase, bool $isDdev, array $accumulated = []): array {
   try {
     $this->logger->info("Fetching page: $url");
 

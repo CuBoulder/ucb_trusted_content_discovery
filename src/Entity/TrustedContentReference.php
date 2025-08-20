@@ -196,6 +196,38 @@ class TrustedContentReference extends ContentEntityBase {
         'type' => 'string',
         'weight' => 7,
       ])
+      ->setDisplayConfigurable('form', TRUE);
+
+    // Telemetry fields from ucb_trust_schema
+    $fields['syndication_consumer_sites'] = BaseFieldDefinition::create('integer')
+      ->setLabel(t('Consumer Sites Count'))
+      ->setDescription(t('Number of sites that are consuming this content.'))
+      ->setDefaultValue(0)
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'number_integer',
+        'weight' => 8,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'number',
+        'weight' => 8,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE);
+
+    $fields['syndication_total_views'] = BaseFieldDefinition::create('integer')
+      ->setLabel(t('Total Views'))
+      ->setDescription(t('Total number of views across all consumer sites.'))
+      ->setDefaultValue(0)
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'number_integer',
+        'weight' => 9,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'number',
+        'weight' => 9,
+      ])
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
