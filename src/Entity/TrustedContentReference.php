@@ -231,6 +231,23 @@ class TrustedContentReference extends ContentEntityBase {
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
+    // Publication status for soft deletion
+    $fields['is_published'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(t('Is Published'))
+      ->setDescription(t('Whether this content is currently published and available.'))
+      ->setDefaultValue(TRUE)
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'boolean',
+        'weight' => 10,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'boolean_checkbox',
+        'weight' => 10,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE);
+
     return $fields;
   }
 
