@@ -144,8 +144,19 @@ class TrustedContentSyncService {
     $is_update = FALSE;
 
     if ($entity) {
+      // Check if entity was previously unpublished and restore it
+      $was_unpublished = FALSE;
+      if (!$entity->get('is_published')->value) {
+        $entity->set('is_published', TRUE);
+        $was_unpublished = TRUE;
+        $this->logger->info('Restoring previously unpublished entity: @uuid', ['@uuid' => $remote_uuid]);
+      }
+      
       $localLastFetched = (int) $entity->get('last_fetched')->value;
-      if ($remoteChanged <= $localLastFetched) {
+      
+      // If entity was unpublished, always update it regardless of timestamp
+      // If entity wasn't unpublished, only update if remote content is newer
+      if (!$was_unpublished && $remoteChanged <= $localLastFetched) {
         // log telemetry inline
         $telemetry_storage = $this->entityTypeManager->getStorage('ucb_trusted_content_telemetry');
         $telemetry = $telemetry_storage->create([
@@ -300,7 +311,7 @@ class TrustedContentSyncService {
       'reference_uuid' => $remote_uuid,
       'trusted_reference' => $entity->id(),
       'fetched' => \Drupal::time()->getCurrentTime(),
-      'consumer_site_count' => isset($attributes['syndication_consumer_sites']) ? count($attributes['syndication_consumer_sites']) : 0,
+      'consumer_site_count' => $consumerSites,
       'consumer_site_list' => isset($attributes['syndication_consumer_sites_list']) ? json_encode($attributes['syndication_consumer_sites_list']) : '',
       'total_views' => $attributes['syndication_total_views'] ?? 0,
     ]);
@@ -345,8 +356,14 @@ class TrustedContentSyncService {
 
     if (!empty($ids)) {
       $entities = $storage->loadMultiple($ids);
-      $storage->delete($entities);
-      $this->logger->notice('Deleted @count stale entries from @site', [
+      
+      // Mark entities as unpublished instead of deleting them
+      foreach ($entities as $entity) {
+        $entity->set('is_published', FALSE);
+        $entity->save();
+      }
+      
+      $this->logger->notice('Marked @count entries as unpublished from @site', [
         '@count' => count($ids),
         '@site' => $sourceSite,
       ]);
