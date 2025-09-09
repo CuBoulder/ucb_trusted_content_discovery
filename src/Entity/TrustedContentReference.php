@@ -124,6 +124,55 @@ class TrustedContentReference extends ContentEntityBase {
       ->setDisplayConfigurable('view', TRUE)
       ->setDisplayConfigurable('filter', TRUE);
 
+    $fields['timeliness'] = BaseFieldDefinition::create('list_string')
+      ->setLabel(t('Timeliness'))
+      ->setDescription(t('The timeliness of the content (evergreen, semester-specific, etc.).'))
+      ->setSettings([
+        'allowed_values' => [
+          'evergreen' => 'Evergreen',
+          'fall_semester' => 'Fall Semester',
+          'spring_semester' => 'Spring Semester',
+          'summer_semester' => 'Summer Semester',
+          'winter_semester' => 'Winter Semester',
+        ],
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'list_default',
+        'weight' => 2.5,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'options_select',
+        'weight' => 2.5,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
+    $fields['audience'] = BaseFieldDefinition::create('list_string')
+      ->setLabel(t('Audience'))
+      ->setDescription(t('The target audience for the content.'))
+      ->setSettings([
+        'allowed_values' => [
+          'students' => 'Students',
+          'faculty' => 'Faculty',
+          'staff' => 'Staff',
+          'alumni' => 'Alumni',
+        ],
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'list_default',
+        'weight' => 2.6,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'options_select',
+        'weight' => 2.6,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
     $fields['source_site'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Source Site'));
 
