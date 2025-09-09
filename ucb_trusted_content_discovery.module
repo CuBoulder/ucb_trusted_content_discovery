@@ -92,6 +92,18 @@ function ucb_trusted_content_discovery_views_data_alter(array &$data) {
   $data['ucb_trusted_content_reference']['trust_scope']['filter']['help'] = t('Filter by Trust Scope.');
   $data['ucb_trusted_content_reference']['trust_scope']['filter']['options callback'] = 'ucb_trusted_content_discovery_trust_scope_options';
 
+  // Timeliness.
+  $data['ucb_trusted_content_reference']['timeliness']['filter']['id'] = 'in_operator';
+  $data['ucb_trusted_content_reference']['timeliness']['filter']['label'] = t('Timeliness');
+  $data['ucb_trusted_content_reference']['timeliness']['filter']['help'] = t('Filter by Timeliness.');
+  $data['ucb_trusted_content_reference']['timeliness']['filter']['options callback'] = 'ucb_trusted_content_discovery_timeliness_options';
+
+  // Audience.
+  $data['ucb_trusted_content_reference']['audience']['filter']['id'] = 'in_operator';
+  $data['ucb_trusted_content_reference']['audience']['filter']['label'] = t('Audience');
+  $data['ucb_trusted_content_reference']['audience']['filter']['help'] = t('Filter by Audience.');
+  $data['ucb_trusted_content_reference']['audience']['filter']['options callback'] = 'ucb_trusted_content_discovery_audience_options';
+
 
 $data['ucb_trusted_content_reference__trust_topics']['trust_topics_target_id'] = [
     'title' => t('Trust Topics'),
@@ -143,6 +155,31 @@ function ucb_trusted_content_discovery_trust_scope_options() {
     'college_level' => 'College Level',
     'administrative_unit' => 'Administrative Unit',
     'campus_wide' => 'Campus-wide',
+  ];
+}
+
+/**
+ * Options callback for timeliness.
+ */
+function ucb_trusted_content_discovery_timeliness_options() {
+  return [
+    'evergreen' => 'Evergreen',
+    'fall_semester' => 'Fall Semester',
+    'spring_semester' => 'Spring Semester',
+    'summer_semester' => 'Summer Semester',
+    'winter_semester' => 'Winter Semester',
+  ];
+}
+
+/**
+ * Options callback for audience.
+ */
+function ucb_trusted_content_discovery_audience_options() {
+  return [
+    'students' => 'Students',
+    'faculty' => 'Faculty',
+    'staff' => 'Staff',
+    'alumni' => 'Alumni',
   ];
 }
 
