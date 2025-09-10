@@ -57,7 +57,7 @@ class TrustedContentSyncService {
     // Query for all node types
     $query = http_build_query([
       'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image,node_id.field_social_sharing_image,node_id.field_social_sharing_image.field_media_image',
-      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id,trust_syndication_enabled,syndication_consumer_sites,syndication_total_views,syndication_consumer_sites_list',
+      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,timeliness,audience,trust_contact,trust_topics,node_id,trust_syndication_enabled,syndication_consumer_sites,syndication_total_views,syndication_consumer_sites_list',
       'fields[taxonomy_term--trust_topics]' => 'name',
       'fields[node--basic_page]' => 'title,body,changed,nid,path,field_social_sharing_image',
       'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid,path',
@@ -192,8 +192,12 @@ class TrustedContentSyncService {
 
     $trustRole = $attributes['trust_role'] ?? '';
     $trustScope = $attributes['trust_scope'] ?? '';
+    $timeliness = $attributes['timeliness'] ?? '';
+    $audience = $attributes['audience'] ?? '';
     $allowedRoles = ['primary_source', 'secondary_source', 'subject_matter_contributor', 'unverified'];
     $allowedScopes = ['department_level', 'college_level', 'administrative_unit', 'campus_wide'];
+    $allowedTimeliness = ['evergreen', 'fall_semester', 'spring_semester', 'summer_semester', 'winter_semester'];
+    $allowedAudience = ['students', 'faculty', 'staff', 'alumni'];
 
     $topicTerms = [];
     foreach ($relationships['trust_topics']['data'] ?? [] as $topicRef) {
@@ -221,6 +225,12 @@ class TrustedContentSyncService {
     $entity->set('summary', $summary);
     $entity->set('trust_role', in_array($trustRole, $allowedRoles, true) ? $trustRole : '');
     $entity->set('trust_scope', in_array($trustScope, $allowedScopes, true) ? $trustScope : '');
+    if ($timeliness !== '') {
+      $entity->set('timeliness', in_array($timeliness, $allowedTimeliness, true) ? $timeliness : '');
+    }
+    if ($audience !== '') {
+      $entity->set('audience', in_array($audience, $allowedAudience, true) ? $audience : '');
+    }
     $entity->set('remote_type', $nodeType);
     // Store the public - facing link for reference later -- link to article and use in web component.
     $entity->set('source_site', $publicBase);
