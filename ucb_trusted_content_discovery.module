@@ -1,7 +1,5 @@
 <?php
 
-use Drupal\ucb_trusted_content_discovery\Entity\TrustedContentReference;
-use Symfony\Component\Yaml\Yaml;
 use Drupal\ucb_trusted_content_discovery\Service\TrustedContentSync;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -23,56 +21,6 @@ function ucb_trusted_content_discovery_cron() {
   }
   catch (\Exception $e) {
     \Drupal::logger('ucb_trusted_content_discovery')->error('💥 Error in cron: @msg', ['@msg' => $e->getMessage()]);
-  }
-}
-
-
-/**
- * Implements hook_install().
- */
-function ucb_trusted_content_discovery_install() {
-  \Drupal::logger('ucb_trusted_content_discovery')->notice('Running hook_install()');
-
-  $entity_type_id = 'ucb_trusted_content_reference';
-  $entity_type = \Drupal::entityTypeManager()->getDefinition($entity_type_id);
-  $update_manager = \Drupal::entityDefinitionUpdateManager();
-
-  // Install the entity type itself.
-  \Drupal::entityDefinitionUpdateManager()->installEntityType($entity_type);
-
-  // Install field storage definitions.
-  foreach (TrustedContentReference::baseFieldDefinitions($entity_type) as $field_name => $definition) {
-    if (!$update_manager->getFieldStorageDefinition($field_name, $entity_type_id)) {
-      $update_manager->installFieldStorageDefinition($field_name, $definition);
-    }
-  }
-
-  $view_path = DRUPAL_ROOT . '/modules/custom/ucb_trusted_content_discovery/config/install/views.view.ucb_trusted_discovery.yml';
-  \Drupal::logger('ucb_trusted_content_discovery')->notice('Checking view path: ' . $view_path);
-
-  if (file_exists($view_path)) {
-    \Drupal::logger('ucb_trusted_content_discovery')->notice('YAML found, importing view...');
-    $yaml = Yaml::parse(file_get_contents($view_path));
-
-    // 🧹 Clean up if view already exists.
-    $existing = \Drupal::entityTypeManager()->getStorage('view')->load('ucb_trusted_discovery');
-    if ($existing) {
-      $existing->delete();
-    }
-
-    // Create and save the View entity.
-    $view = \Drupal::entityTypeManager()
-      ->getStorage('view')
-      ->create($yaml);
-    $view->save();
-
-    // Rebuild caches and routing.
-    \Drupal::entityTypeManager()->clearCachedDefinitions();
-    \Drupal::service('entity_type.bundle.info')->clearCachedBundles();
-    \Drupal::service('router.builder')->rebuild();
-  }
-  else {
-    \Drupal::logger('ucb_trusted_content_discovery')->error('YAML file not found at install path!');
   }
 }
 
