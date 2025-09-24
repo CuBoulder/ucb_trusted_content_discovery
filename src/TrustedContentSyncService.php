@@ -57,7 +57,7 @@ class TrustedContentSyncService {
     // Query for all node types
     $query = http_build_query([
       'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image,node_id.field_social_sharing_image,node_id.field_social_sharing_image.field_media_image',
-      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,timeliness,audience,trust_contact,trust_topics,node_id,trust_syndication_enabled,syndication_consumer_sites,syndication_total_views,syndication_consumer_sites_list',
+      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,timeliness,audience,trust_contact,trust_topics,node_id,trust_syndication_enabled,syndication_consumer_sites,syndication_total_views,syndication_consumer_sites_list,site_affiliation,content_authority',
       'fields[taxonomy_term--trust_topics]' => 'name',
       'fields[node--basic_page]' => 'title,body,changed,nid,path,field_social_sharing_image',
       'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid,path',
@@ -230,6 +230,13 @@ class TrustedContentSyncService {
     }
     if ($audience !== '') {
       $entity->set('audience', in_array($audience, $allowedAudience, true) ? $audience : '');
+    }
+    // Affiliation
+    if (!empty($attributes['site_affiliation'])) {
+      $entity->set('site_affiliation', (string) $attributes['site_affiliation']);
+    }
+    if (array_key_exists('content_authority', $attributes)) {
+      $entity->set('content_authority', (string) ($attributes['content_authority'] ?? ''));
     }
     $entity->set('remote_type', $nodeType);
     // Store the public - facing link for reference later -- link to article and use in web component.

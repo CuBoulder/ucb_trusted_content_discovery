@@ -173,6 +173,46 @@ class TrustedContentReference extends ContentEntityBase {
       ->setDisplayConfigurable('view', TRUE)
       ->setDisplayConfigurable('filter', TRUE);
 
+    $fields['site_affiliation'] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Site Affiliation'))
+      ->setDescription(t('Machine value for the site affiliation from the remote trust metadata.'))
+      ->setSettings([
+        'max_length' => 255,
+        'text_processing' => 0,
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'string',
+        'weight' => 2.7,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'string_textfield',
+        'weight' => 2.7,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
+    $fields['content_authority'] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Content Authority'))
+      ->setDescription(t('Human-readable label for the site affiliation from the remote trust metadata.'))
+      ->setSettings([
+        'max_length' => 255,
+        'text_processing' => 0,
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'string',
+        'weight' => 2.8,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'string_textfield',
+        'weight' => 2.8,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
     $fields['source_site'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Source Site'));
 
