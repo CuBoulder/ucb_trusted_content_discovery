@@ -124,6 +124,95 @@ class TrustedContentReference extends ContentEntityBase {
       ->setDisplayConfigurable('view', TRUE)
       ->setDisplayConfigurable('filter', TRUE);
 
+    $fields['timeliness'] = BaseFieldDefinition::create('list_string')
+      ->setLabel(t('Timeliness'))
+      ->setDescription(t('The timeliness of the content (evergreen, semester-specific, etc.).'))
+      ->setSettings([
+        'allowed_values' => [
+          'evergreen' => 'Evergreen',
+          'fall_semester' => 'Fall Semester',
+          'spring_semester' => 'Spring Semester',
+          'summer_semester' => 'Summer Semester',
+          'winter_semester' => 'Winter Semester',
+        ],
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'list_default',
+        'weight' => 2.5,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'options_select',
+        'weight' => 2.5,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
+    $fields['audience'] = BaseFieldDefinition::create('list_string')
+      ->setLabel(t('Audience'))
+      ->setDescription(t('The target audience for the content.'))
+      ->setSettings([
+        'allowed_values' => [
+          'students' => 'Students',
+          'faculty' => 'Faculty',
+          'staff' => 'Staff',
+          'alumni' => 'Alumni',
+        ],
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'list_default',
+        'weight' => 2.6,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'options_select',
+        'weight' => 2.6,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
+    $fields['site_affiliation'] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Site Affiliation'))
+      ->setDescription(t('Machine value for the site affiliation from the remote trust metadata.'))
+      ->setSettings([
+        'max_length' => 255,
+        'text_processing' => 0,
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'string',
+        'weight' => 2.7,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'string_textfield',
+        'weight' => 2.7,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
+    $fields['content_authority'] = BaseFieldDefinition::create('string')
+      ->setLabel(t('Content Authority'))
+      ->setDescription(t('Human-readable label for the site affiliation from the remote trust metadata.'))
+      ->setSettings([
+        'max_length' => 255,
+        'text_processing' => 0,
+      ])
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'string',
+        'weight' => 2.8,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'string_textfield',
+        'weight' => 2.8,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
     $fields['source_site'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Source Site'));
 
@@ -195,6 +284,55 @@ class TrustedContentReference extends ContentEntityBase {
         'label' => 'above',
         'type' => 'string',
         'weight' => 7,
+      ])
+      ->setDisplayConfigurable('form', TRUE);
+
+    // Telemetry fields from ucb_trust_schema
+    $fields['syndication_consumer_sites'] = BaseFieldDefinition::create('integer')
+      ->setLabel(t('Consumer Sites Count'))
+      ->setDescription(t('Number of sites that are consuming this content.'))
+      ->setDefaultValue(0)
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'number_integer',
+        'weight' => 8,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'number',
+        'weight' => 8,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE);
+
+    $fields['syndication_total_views'] = BaseFieldDefinition::create('integer')
+      ->setLabel(t('Total Views'))
+      ->setDescription(t('Total number of views across all consumer sites.'))
+      ->setDefaultValue(0)
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'number_integer',
+        'weight' => 9,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'number',
+        'weight' => 9,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE);
+
+    // Publication status for soft deletion
+    $fields['is_published'] = BaseFieldDefinition::create('boolean')
+      ->setLabel(t('Is Published'))
+      ->setDescription(t('Whether this content is currently published and available.'))
+      ->setDefaultValue(TRUE)
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'boolean',
+        'weight' => 10,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'boolean_checkbox',
+        'weight' => 10,
       ])
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);

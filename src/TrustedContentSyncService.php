@@ -57,7 +57,7 @@ class TrustedContentSyncService {
     // Query for all node types
     $query = http_build_query([
       'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image,node_id.field_social_sharing_image,node_id.field_social_sharing_image.field_media_image',
-      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_contact,trust_topics,node_id,trust_syndication_enabled',
+      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,timeliness,audience,trust_contact,trust_topics,node_id,trust_syndication_enabled,syndication_consumer_sites,syndication_total_views,syndication_consumer_sites_list,site_affiliation,content_authority',
       'fields[taxonomy_term--trust_topics]' => 'name',
       'fields[node--basic_page]' => 'title,body,changed,nid,path,field_social_sharing_image',
       'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid,path',
@@ -126,6 +126,12 @@ class TrustedContentSyncService {
     }
     $attributes = $item['attributes'];
     $relationships = $item['relationships'] ?? [];
+    
+    // Debug: Log the raw attributes to see what we're getting
+    $this->logger->info('Raw attributes for @uuid: @attrs', [
+      '@uuid' => $item['id'] ?? 'unknown',
+      '@attrs' => json_encode($attributes),
+    ]);
 
     $nodeRef = $relationships['node_id']['data'] ?? null;
     $nodeId = $nodeRef['id'] ?? null;
@@ -147,17 +153,45 @@ class TrustedContentSyncService {
     ]);
     $entity = reset($entities);
 
+    $is_update = FALSE;
+
     if ($entity) {
+      // Check if entity was previously unpublished and restore it
+      $was_unpublished = FALSE;
+      if (!$entity->get('is_published')->value) {
+        $entity->set('is_published', TRUE);
+        $was_unpublished = TRUE;
+        $this->logger->info('Restoring previously unpublished entity: @uuid', ['@uuid' => $remote_uuid]);
+      }
+      
       $localLastFetched = (int) $entity->get('last_fetched')->value;
-      if ($remoteChanged <= $localLastFetched) {
+      
+      // If entity was unpublished, always update it regardless of timestamp
+      // If entity wasn't unpublished, only update if remote content is newer
+      if (!$was_unpublished && $remoteChanged <= $localLastFetched) {
+        // log telemetry inline
+        $telemetry_storage = $this->entityTypeManager->getStorage('ucb_trusted_content_telemetry');
+        $telemetry = $telemetry_storage->create([
+          'reference_uuid' => $remote_uuid,
+          'trusted_reference' => $entity->id(),
+          'fetched' => \Drupal::time()->getCurrentTime(),
+          'consumer_site_count' => $attributes['syndication_consumer_sites'] ?? 0,
+          'consumer_site_list' => isset($attributes['syndication_consumer_sites_list']) ? json_encode($attributes['syndication_consumer_sites_list']) : '',
+          'total_views' => $attributes['syndication_total_views'] ?? 0,
+        ]);
+        $telemetry->save();
         return;
       }
+
+      $is_update = TRUE;
     }
     else {
-      $entity = $storage->create();
-      $entity->set('remote_uuid', $remote_uuid);
-      $entity->set('source_site', $publicBase);
+      $entity = $storage->create([
+        'remote_uuid' => $remote_uuid,
+        'source_site' => $publicBase,
+      ]);
     }
+
 
     // create
     $title = $nodeAttrs['title'] ?? 'Untitled';
@@ -170,8 +204,12 @@ class TrustedContentSyncService {
 
     $trustRole = $attributes['trust_role'] ?? '';
     $trustScope = $attributes['trust_scope'] ?? '';
+    $timeliness = $attributes['timeliness'] ?? '';
+    $audience = $attributes['audience'] ?? '';
     $allowedRoles = ['primary_source', 'secondary_source', 'subject_matter_contributor', 'unverified'];
     $allowedScopes = ['department_level', 'college_level', 'administrative_unit', 'campus_wide'];
+    $allowedTimeliness = ['evergreen', 'fall_semester', 'spring_semester', 'summer_semester', 'winter_semester'];
+    $allowedAudience = ['students', 'faculty', 'staff', 'alumni'];
 
     $topicTerms = [];
     foreach ($relationships['trust_topics']['data'] ?? [] as $topicRef) {
@@ -199,6 +237,19 @@ class TrustedContentSyncService {
     $entity->set('summary', $summary);
     $entity->set('trust_role', in_array($trustRole, $allowedRoles, true) ? $trustRole : '');
     $entity->set('trust_scope', in_array($trustScope, $allowedScopes, true) ? $trustScope : '');
+    if ($timeliness !== '') {
+      $entity->set('timeliness', in_array($timeliness, $allowedTimeliness, true) ? $timeliness : '');
+    }
+    if ($audience !== '') {
+      $entity->set('audience', in_array($audience, $allowedAudience, true) ? $audience : '');
+    }
+    // Affiliation
+    if (!empty($attributes['site_affiliation'])) {
+      $entity->set('site_affiliation', (string) $attributes['site_affiliation']);
+    }
+    if (array_key_exists('content_authority', $attributes)) {
+      $entity->set('content_authority', (string) ($attributes['content_authority'] ?? ''));
+    }
     $entity->set('remote_type', $nodeType);
     // Store the public - facing link for reference later -- link to article and use in web component.
     $entity->set('source_site', $publicBase);
@@ -268,7 +319,32 @@ class TrustedContentSyncService {
     $entity->set('focal_image_square', $focalSquare);
     $entity->set('focal_image_alt', $altText);
 
+    // Set syndication data from remote trust metadata
+    $consumerSites = $attributes['syndication_consumer_sites'] ?? 0;
+    $totalViews = $attributes['syndication_total_views'] ?? 0;
+    
+    $this->logger->info('Setting syndication data for @uuid: consumer_sites=@sites, total_views=@views', [
+      '@uuid' => $remote_uuid,
+      '@sites' => $consumerSites,
+      '@views' => $totalViews,
+    ]);
+    
+    $entity->set('syndication_consumer_sites', $consumerSites);
+    $entity->set('syndication_total_views', $totalViews);
+
     $entity->save();
+
+    // after saving the content reference, log telemetry
+    $telemetry_storage = $this->entityTypeManager->getStorage('ucb_trusted_content_telemetry');
+    $telemetry = $telemetry_storage->create([
+      'reference_uuid' => $remote_uuid,
+      'trusted_reference' => $entity->id(),
+      'fetched' => \Drupal::time()->getCurrentTime(),
+      'consumer_site_count' => $consumerSites,
+      'consumer_site_list' => isset($attributes['syndication_consumer_sites_list']) ? json_encode($attributes['syndication_consumer_sites_list']) : '',
+      'total_views' => $attributes['syndication_total_views'] ?? 0,
+    ]);
+    $telemetry->save();
   }
 
   protected function findIncludedById(array $included, string $type, string $id): ?array {
@@ -309,15 +385,21 @@ class TrustedContentSyncService {
 
     if (!empty($ids)) {
       $entities = $storage->loadMultiple($ids);
-      $storage->delete($entities);
-      $this->logger->notice('Deleted @count stale entries from @site', [
+      
+      // Mark entities as unpublished instead of deleting them
+      foreach ($entities as $entity) {
+        $entity->set('is_published', FALSE);
+        $entity->save();
+      }
+      
+      $this->logger->notice('Marked @count entries as unpublished from @site', [
         '@count' => count($ids),
         '@site' => $sourceSite,
       ]);
+    }
   }
-}
 
-protected function fetchAllPaginated(string $url, string $publicBase, bool $isDdev, array $accumulated = []): array {
+  protected function fetchAllPaginated(string $url, string $publicBase, bool $isDdev, array $accumulated = []): array {
   try {
     $this->logger->info("Fetching page: $url");
 
