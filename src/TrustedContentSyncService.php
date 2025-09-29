@@ -57,7 +57,7 @@ class TrustedContentSyncService {
     // Query for all node types
     $query = http_build_query([
       'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image,node_id.field_social_sharing_image,node_id.field_social_sharing_image.field_media_image',
-      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,timeliness,audience,trust_contact,trust_topics,node_id,trust_syndication_enabled,syndication_consumer_sites,syndication_total_views,syndication_consumer_sites_list,site_affiliation,content_authority',
+      'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_metadata_type,timeliness,audience,trust_contact,trust_topics,node_id,trust_syndication_enabled,syndication_consumer_sites,syndication_total_views,syndication_consumer_sites_list,site_affiliation,content_authority',
       'fields[taxonomy_term--trust_topics]' => 'name',
       'fields[node--basic_page]' => 'title,body,changed,nid,path,field_social_sharing_image',
       'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid,path',
@@ -169,18 +169,27 @@ class TrustedContentSyncService {
       // If entity was unpublished, always update it regardless of timestamp
       // If entity wasn't unpublished, only update if remote content is newer
       if (!$was_unpublished && $remoteChanged <= $localLastFetched) {
-        // log telemetry inline
-        $telemetry_storage = $this->entityTypeManager->getStorage('ucb_trusted_content_telemetry');
-        $telemetry = $telemetry_storage->create([
-          'reference_uuid' => $remote_uuid,
-          'trusted_reference' => $entity->id(),
-          'fetched' => \Drupal::time()->getCurrentTime(),
-          'consumer_site_count' => $attributes['syndication_consumer_sites'] ?? 0,
-          'consumer_site_list' => isset($attributes['syndication_consumer_sites_list']) ? json_encode($attributes['syndication_consumer_sites_list']) : '',
-          'total_views' => $attributes['syndication_total_views'] ?? 0,
-        ]);
-        $telemetry->save();
-        return;
+        // If no field backfill is needed, short-circuit as before.
+        $needsTypeBackfill = (string) ($entity->get('type')->value ?? '') === '' && !empty($attributes['trust_metadata_type']);
+        $needsTimelinessBackfill = (string) ($entity->get('timeliness')->value ?? '') === '' && !empty($attributes['timeliness']);
+        $needsAudienceBackfill = (string) ($entity->get('audience')->value ?? '') === '' && !empty($attributes['audience']);
+        $needsBackfill = $needsTypeBackfill || $needsTimelinessBackfill || $needsAudienceBackfill;
+
+        if (!$needsBackfill) {
+          // log telemetry inline
+          $telemetry_storage = $this->entityTypeManager->getStorage('ucb_trusted_content_telemetry');
+          $telemetry = $telemetry_storage->create([
+            'reference_uuid' => $remote_uuid,
+            'trusted_reference' => $entity->id(),
+            'fetched' => \Drupal::time()->getCurrentTime(),
+            'consumer_site_count' => $attributes['syndication_consumer_sites'] ?? 0,
+            'consumer_site_list' => isset($attributes['syndication_consumer_sites_list']) ? json_encode($attributes['syndication_consumer_sites_list']) : '',
+            'total_views' => $attributes['syndication_total_views'] ?? 0,
+          ]);
+          $telemetry->save();
+          return;
+        }
+        // If backfill is needed, proceed without returning so we can set fields below.
       }
 
       $is_update = TRUE;
@@ -205,10 +214,37 @@ class TrustedContentSyncService {
     $trustRole = $attributes['trust_role'] ?? '';
     $trustScope = $attributes['trust_scope'] ?? '';
     $timeliness = $attributes['timeliness'] ?? '';
+    // JSON:API public name is trust_metadata_type on producer
+    $type = $attributes['trust_metadata_type'] ?? '';
     $audience = $attributes['audience'] ?? '';
     $allowedRoles = ['primary_source', 'secondary_source', 'subject_matter_contributor', 'unverified'];
     $allowedScopes = ['department_level', 'college_level', 'administrative_unit', 'campus_wide'];
     $allowedTimeliness = ['evergreen', 'fall_semester', 'spring_semester', 'summer_semester', 'winter_semester'];
+    $allowedType = [
+      'advising_session',
+      'brown_bag',
+      'colloquium_seminar',
+      'commencement',
+      'community_engagement',
+      'competition',
+      'concert_show',
+      'dates_deadlines',
+      'exhibit',
+      'featured_event',
+      'festival',
+      'film',
+      'information_session',
+      'lecture_presentation',
+      'live_streams',
+      'meeting_conference',
+      'outreach',
+      'social',
+      'sporting_event',
+      'student_club',
+      'tour',
+      'virtual',
+      'workshop_training',
+    ];
     $allowedAudience = ['students', 'faculty', 'staff', 'alumni'];
 
     $topicTerms = [];
@@ -239,6 +275,9 @@ class TrustedContentSyncService {
     $entity->set('trust_scope', in_array($trustScope, $allowedScopes, true) ? $trustScope : '');
     if ($timeliness !== '') {
       $entity->set('timeliness', in_array($timeliness, $allowedTimeliness, true) ? $timeliness : '');
+    }
+    if ($type !== '') {
+      $entity->set('type', in_array($type, $allowedType, true) ? $type : '');
     }
     if ($audience !== '') {
       $entity->set('audience', in_array($audience, $allowedAudience, true) ? $audience : '');
