@@ -124,6 +124,51 @@ class TrustedContentReference extends ContentEntityBase {
       ->setDisplayConfigurable('view', TRUE)
       ->setDisplayConfigurable('filter', TRUE);
 
+    $fields['type'] = BaseFieldDefinition::create('list_string')
+      ->setLabel(t('Type'))
+      ->setDescription(t('The content type/subject from trust metadata.'))
+      ->setSettings([
+        'allowed_values' => [
+          '' => '- None -',
+          'advising_session' => 'Advising session',
+          'brown_bag' => 'Brown Bag',
+          'colloquium_seminar' => 'Colloquium/Seminar',
+          'commencement' => 'Commencement',
+          'community_engagement' => 'Community Engagement',
+          'competition' => 'Competition',
+          'concert_show' => 'Concert/Show',
+          'dates_deadlines' => 'Dates/Deadlines',
+          'exhibit' => 'Exhibit',
+          'featured_event' => 'Featured Event',
+          'festival' => 'Festival',
+          'film' => 'Film',
+          'information_session' => 'Information Session',
+          'lecture_presentation' => 'Lecture/Presentation',
+          'live_streams' => 'Live streams',
+          'meeting_conference' => 'Meeting/Conference',
+          'outreach' => 'Outreach',
+          'social' => 'Social',
+          'sporting_event' => 'Sporting Event',
+          'student_club' => 'Student Club',
+          'tour' => 'Tour',
+          'virtual' => 'Virtual',
+          'workshop_training' => 'Workshop/Training',
+        ],
+      ])
+      ->setDefaultValue('')
+      ->setDisplayOptions('view', [
+        'label' => 'above',
+        'type' => 'list_default',
+        'weight' => 2.55,
+      ])
+      ->setDisplayOptions('form', [
+        'type' => 'options_select',
+        'weight' => 2.55,
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('filter', TRUE);
+
     $fields['timeliness'] = BaseFieldDefinition::create('list_string')
       ->setLabel(t('Timeliness'))
       ->setDescription(t('The timeliness of the content (evergreen, semester-specific, etc.).'))

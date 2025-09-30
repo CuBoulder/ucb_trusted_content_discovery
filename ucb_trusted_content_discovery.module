@@ -52,6 +52,12 @@ function ucb_trusted_content_discovery_views_data_alter(array &$data) {
   $data['ucb_trusted_content_reference']['audience']['filter']['help'] = t('Filter by Audience.');
   $data['ucb_trusted_content_reference']['audience']['filter']['options callback'] = 'ucb_trusted_content_discovery_audience_options';
 
+  // Type.
+  $data['ucb_trusted_content_reference']['type']['filter']['id'] = 'in_operator';
+  $data['ucb_trusted_content_reference']['type']['filter']['label'] = t('Type');
+  $data['ucb_trusted_content_reference']['type']['filter']['help'] = t('Filter by Type.');
+  $data['ucb_trusted_content_reference']['type']['filter']['options callback'] = 'ucb_trusted_content_discovery_type_options';
+
 
 $data['ucb_trusted_content_reference__trust_topics']['trust_topics_target_id'] = [
     'title' => t('Trust Topics'),
@@ -128,6 +134,38 @@ function ucb_trusted_content_discovery_audience_options() {
     'faculty' => 'Faculty',
     'staff' => 'Staff',
     'alumni' => 'Alumni',
+  ];
+}
+
+/**
+ * Options callback for type.
+ */
+function ucb_trusted_content_discovery_type_options() {
+  return [
+    '' => '- None -',
+    'advising_session' => 'Advising session',
+    'brown_bag' => 'Brown Bag',
+    'colloquium_seminar' => 'Colloquium/Seminar',
+    'commencement' => 'Commencement',
+    'community_engagement' => 'Community Engagement',
+    'competition' => 'Competition',
+    'concert_show' => 'Concert/Show',
+    'dates_deadlines' => 'Dates/Deadlines',
+    'exhibit' => 'Exhibit',
+    'featured_event' => 'Featured Event',
+    'festival' => 'Festival',
+    'film' => 'Film',
+    'information_session' => 'Information Session',
+    'lecture_presentation' => 'Lecture/Presentation',
+    'live_streams' => 'Live streams',
+    'meeting_conference' => 'Meeting/Conference',
+    'outreach' => 'Outreach',
+    'social' => 'Social',
+    'sporting_event' => 'Sporting Event',
+    'student_club' => 'Student Club',
+    'tour' => 'Tour',
+    'virtual' => 'Virtual',
+    'workshop_training' => 'Workshop/Training',
   ];
 }
 
