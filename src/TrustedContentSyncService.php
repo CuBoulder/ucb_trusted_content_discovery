@@ -169,13 +169,20 @@ class TrustedContentSyncService {
       // If entity was unpublished, always update it regardless of timestamp
       // If entity wasn't unpublished, only update if remote content is newer
       if (!$was_unpublished && $remoteChanged <= $localLastFetched) {
-        // If no field backfill is needed, short-circuit as before.
+        // If no field backfill or telemetry update is needed, short-circuit
         $needsTypeBackfill = (string) ($entity->get('type')->value ?? '') === '' && !empty($attributes['trust_metadata_type']);
         $needsTimelinessBackfill = (string) ($entity->get('timeliness')->value ?? '') === '' && !empty($attributes['timeliness']);
         $needsAudienceBackfill = (string) ($entity->get('audience')->value ?? '') === '' && !empty($attributes['audience']);
         $needsBackfill = $needsTypeBackfill || $needsTimelinessBackfill || $needsAudienceBackfill;
 
-        if (!$needsBackfill) {
+        // Telemetry changes trigger update & telemetry record
+        $currentSites = (int) ($entity->get('syndication_consumer_sites')->value ?? 0);
+        $currentViews = (int) ($entity->get('syndication_total_views')->value ?? 0);
+        $newSites = (int) ($attributes['syndication_consumer_sites'] ?? 0);
+        $newViews = (int) ($attributes['syndication_total_views'] ?? 0);
+        $needsTelemetryUpdate = ($newSites !== $currentSites) || ($newViews !== $currentViews);
+
+        if (!$needsBackfill && !$needsTelemetryUpdate) {
           // log telemetry inline
           $telemetry_storage = $this->entityTypeManager->getStorage('ucb_trusted_content_telemetry');
           $telemetry = $telemetry_storage->create([
@@ -189,7 +196,7 @@ class TrustedContentSyncService {
           $telemetry->save();
           return;
         }
-        // If backfill is needed, proceed without returning so we can set fields below.
+        // If backfill or telemetry update is needed, proceed without returning so we can set fields below.
       }
 
       $is_update = TRUE;
