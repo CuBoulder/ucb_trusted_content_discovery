@@ -183,6 +183,12 @@ class TrustedContentSyncService {
         $needsTelemetryUpdate = ($newSites !== $currentSites) || ($newViews !== $currentViews);
 
         if (!$needsBackfill && !$needsTelemetryUpdate) {
+          // Ensure last_updated is populated even when content hasn't changed.
+          $currentLastUpdated = (int) ($entity->get('last_updated')->value ?? 0);
+          if ($remoteChanged > 0 && $currentLastUpdated !== $remoteChanged) {
+            $entity->set('last_updated', $remoteChanged);
+            $entity->save();
+          }
           // log telemetry inline
           $telemetry_storage = $this->entityTypeManager->getStorage('ucb_trusted_content_telemetry');
           $telemetry = $telemetry_storage->create([
@@ -196,7 +202,11 @@ class TrustedContentSyncService {
           $telemetry->save();
           return;
         }
-        // If backfill or telemetry update is needed, proceed without returning so we can set fields below.
+        // If backfill or telemetry update is needed, ensure last_updated is recorded from remote.
+        if ($remoteChanged > 0) {
+          $entity->set('last_updated', $remoteChanged);
+        }
+        // Proceed without returning so we can set fields below.
       }
 
       $is_update = TRUE;
@@ -303,6 +313,8 @@ class TrustedContentSyncService {
     $entity->set('source_url', $this->normalizeUrl($sourceUrl, $internalBase, $publicBase));
     $entity->set('remote_path', $remotePath);
     $entity->set('jsonapi_payload', json_encode($item));
+    // Store the remote node changed time on both tracking fields.
+    $entity->set('last_updated', $remoteChanged);
     $entity->set('last_fetched', $remoteChanged);
     $entity->set('trust_topics', $topicTerms);
     $entity->set('remote_nid', $remoteNid);
