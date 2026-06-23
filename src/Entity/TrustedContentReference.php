@@ -197,6 +197,8 @@ class TrustedContentReference extends ContentEntityBase {
     $fields['audience'] = BaseFieldDefinition::create('list_string')
       ->setLabel(t('Audience'))
       ->setDescription(t('The target audience for the content.'))
+      // Audience as multi- value
+      ->setCardinality(BaseFieldDefinition::CARDINALITY_UNLIMITED)
       ->setSettings([
         'allowed_values' => [
           'students' => 'Students',

@@ -1,0 +1,57 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the module.
+ */
+
+use Drupal\Core\Field\FieldStorageDefinitionInterface;
+
+/**
+ * Convert the audience base field to multi-value and repair the discovery view.
+ *
+ * The producer (trustedsite) changed the audience field from a single select to
+ * a multi-select
+ */
+function ucb_trusted_content_discovery_update_10001() {
+  $messages = [];
+  $update_manager = \Drupal::entityDefinitionUpdateManager();
+  $entity_type_id = 'ucb_trusted_content_reference';
+  $field_name = 'audience';
+  $installed = $update_manager->getFieldStorageDefinition($field_name, $entity_type_id);
+  $already_multivalue = $installed
+    && $installed->getCardinality() === FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED;
+
+  if (!$already_multivalue) {
+    if ($installed) {
+      $update_manager->uninstallFieldStorageDefinition($installed);
+    }
+    $new_definition = \Drupal::service('entity_field.manager')
+      ->getFieldStorageDefinitions($entity_type_id)[$field_name];
+    $update_manager->installFieldStorageDefinition($field_name, $entity_type_id, 'ucb_trusted_content_discovery', $new_definition);
+    $messages[] = (string) t('Converted the audience field to multi-value cardinality.');
+  }
+
+  // Repair the active discovery view so its audience filter targets the new
+  // dedicated field table
+  $view = \Drupal::configFactory()->getEditable('views.view.ucb_trusted_discovery');
+  if (!$view->isNew()) {
+    $changed = FALSE;
+    foreach (array_keys($view->get('display') ?? []) as $display_id) {
+      $key = "display.$display_id.display_options.filters.audience";
+      $filter = $view->get($key);
+      if (is_array($filter) && ($filter['table'] ?? '') === 'ucb_trusted_content_reference') {
+        $filter['table'] = 'ucb_trusted_content_reference__audience';
+        $filter['field'] = 'audience_value';
+        $view->set($key, $filter);
+        $changed = TRUE;
+      }
+    }
+    if ($changed) {
+      $view->save(TRUE);
+      $messages[] = (string) t('Repointed the discovery view audience filter to the dedicated field table.');
+    }
+  }
+
+  return $messages ? implode(' ', $messages) : (string) t('Audience field and discovery view already up to date.');
+}
