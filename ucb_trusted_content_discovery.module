@@ -46,11 +46,11 @@ function ucb_trusted_content_discovery_views_data_alter(array &$data) {
   $data['ucb_trusted_content_reference']['timeliness']['filter']['help'] = t('Filter by Timeliness.');
   $data['ucb_trusted_content_reference']['timeliness']['filter']['options callback'] = 'ucb_trusted_content_discovery_timeliness_options';
 
-  // Audience.
-  $data['ucb_trusted_content_reference']['audience']['filter']['id'] = 'in_operator';
-  $data['ucb_trusted_content_reference']['audience']['filter']['label'] = t('Audience');
-  $data['ucb_trusted_content_reference']['audience']['filter']['help'] = t('Filter by Audience.');
-  $data['ucb_trusted_content_reference']['audience']['filter']['options callback'] = 'ucb_trusted_content_discovery_audience_options';
+  // Audience (multi-value: stored in a dedicated field table).
+  $data['ucb_trusted_content_reference__audience']['audience_value']['filter']['id'] = 'in_operator';
+  $data['ucb_trusted_content_reference__audience']['audience_value']['filter']['label'] = t('Audience');
+  $data['ucb_trusted_content_reference__audience']['audience_value']['filter']['help'] = t('Filter by Audience.');
+  $data['ucb_trusted_content_reference__audience']['audience_value']['filter']['options callback'] = 'ucb_trusted_content_discovery_audience_options';
 
   // Type.
   $data['ucb_trusted_content_reference']['type']['filter']['id'] = 'in_operator';

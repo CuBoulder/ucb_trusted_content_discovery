@@ -59,9 +59,9 @@ class TrustedContentSyncService {
       'include' => 'trust_topics,node_id,node_id.field_ucb_article_thumbnail,node_id.field_ucb_article_thumbnail.field_media_image,node_id.field_ucb_person_photo,node_id.field_ucb_person_photo.field_media_image,node_id.field_social_sharing_image,node_id.field_social_sharing_image.field_media_image',
       'fields[trust_metadata--trust_metadata]' => 'trust_role,trust_scope,trust_metadata_type,timeliness,audience,trust_contact,trust_topics,node_id,trust_syndication_enabled,syndication_consumer_sites,syndication_total_views,syndication_consumer_sites_list,site_affiliation,content_authority',
       'fields[taxonomy_term--trust_topics]' => 'name',
-      'fields[node--basic_page]' => 'title,body,changed,nid,path,field_social_sharing_image',
-      'fields[node--ucb_person]' => 'title,body,changed,field_ucb_person_photo,nid,path',
-      'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_ucb_article_thumbnail,changed,nid,path',
+      'fields[node--basic_page]' => 'title,field_abstract,changed,nid,path,field_social_sharing_image',
+      'fields[node--ucb_person]' => 'title,field_abstract,changed,field_ucb_person_photo,nid,path',
+      'fields[node--ucb_article]' => 'title,field_ucb_article_summary,field_abstract,field_ucb_article_thumbnail,changed,nid,path',
       'fields[media--image]' => 'field_media_image',
       'fields[file--file]' => 'uri,url, alt',
       'sort' => '-node_id.changed',
@@ -146,6 +146,14 @@ class TrustedContentSyncService {
     $nodeAttrs = $relatedNode['attributes'];
     $remoteChanged = strtotime($nodeAttrs['changed'] ?? '0');
 
+    // Use producer's field_abstract. strip markup. Abstract -> Summary fallback on Articles
+    $abstract = $nodeAttrs['field_abstract']['value'] ?? ($nodeAttrs['field_abstract'] ?? '');
+    $abstract = is_string($abstract) ? trim(strip_tags($abstract)) : '';
+    $summary = $abstract;
+    if ($summary === '' && $nodeType === 'node--ucb_article') {
+      $summary = $nodeAttrs['field_ucb_article_summary'] ?? '';
+    }
+
     $storage = $this->entityTypeManager->getStorage('ucb_trusted_content_reference');
     $entities = $storage->loadByProperties([
       'remote_uuid' => $remote_uuid,
@@ -172,8 +180,11 @@ class TrustedContentSyncService {
         // If no field backfill or telemetry update is needed, short-circuit
         $needsTypeBackfill = (string) ($entity->get('type')->value ?? '') === '' && !empty($attributes['trust_metadata_type']);
         $needsTimelinessBackfill = (string) ($entity->get('timeliness')->value ?? '') === '' && !empty($attributes['timeliness']);
-        $needsAudienceBackfill = (string) ($entity->get('audience')->value ?? '') === '' && !empty($attributes['audience']);
-        $needsBackfill = $needsTypeBackfill || $needsTimelinessBackfill || $needsAudienceBackfill;
+        $needsAudienceBackfill = $entity->get('audience')->isEmpty() && !empty($attributes['audience']);
+        // Update the summary when the computed value (now sourced from the
+        // abstract)
+        $needsSummaryBackfill = (string) ($entity->get('summary')->value ?? '') !== (string) $summary;
+        $needsBackfill = $needsTypeBackfill || $needsTimelinessBackfill || $needsAudienceBackfill || $needsSummaryBackfill;
 
         // Telemetry changes trigger update & telemetry record
         $currentSites = (int) ($entity->get('syndication_consumer_sites')->value ?? 0);
@@ -223,17 +234,14 @@ class TrustedContentSyncService {
     $title = $nodeAttrs['title'] ?? 'Untitled';
     $remoteNid = $nodeRef['meta']['drupal_internal__target_id'] ?? null;
 
-    $summary = match ($nodeType) {
-      'node--ucb_article' => $nodeAttrs['field_ucb_article_summary'] ?? '',
-      default => $nodeAttrs['body']['summary'] ?? '',
-    };
-
     $trustRole = $attributes['trust_role'] ?? '';
     $trustScope = $attributes['trust_scope'] ?? '';
     $timeliness = $attributes['timeliness'] ?? '';
     // JSON:API public name is trust_metadata_type on producer
     $type = $attributes['trust_metadata_type'] ?? '';
-    $audience = $attributes['audience'] ?? '';
+    // Audience is now a multi-value selection on the producer. Both work will fallback!
+    $audience = $attributes['audience'] ?? [];
+    $audience = is_array($audience) ? $audience : [$audience];
     $allowedRoles = ['primary_source', 'secondary_source', 'subject_matter_contributor', 'unverified'];
     $allowedScopes = ['department_level', 'college_level', 'administrative_unit', 'campus_wide'];
     $allowedTimeliness = ['evergreen', 'fall_semester', 'spring_semester', 'summer_semester', 'winter_semester'];
@@ -296,9 +304,11 @@ class TrustedContentSyncService {
     if ($type !== '') {
       $entity->set('type', in_array($type, $allowedType, true) ? $type : '');
     }
-    if ($audience !== '') {
-      $entity->set('audience', in_array($audience, $allowedAudience, true) ? $audience : '');
-    }
+    // Keep only allowed audience values; store the full set as a multi-value.
+    $validAudience = array_values(array_filter($audience, static function ($value) use ($allowedAudience) {
+      return in_array($value, $allowedAudience, true);
+    }));
+    $entity->set('audience', $validAudience);
     // Affiliation
     if (!empty($attributes['site_affiliation'])) {
       $entity->set('site_affiliation', (string) $attributes['site_affiliation']);
